@@ -17,4 +17,3 @@ flowmodoro = "flowmodoro.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["flowmodoro*"]
-
