@@ -199,15 +199,37 @@ flowmodoro --undo
 flowmodoro --delete
 ```
 
-### 💾 Data Export (CSV & JSON)
+### 💾 Data Export & Excel Visualization
+
+For deep analysis in Excel, Google Sheets, or Apple Numbers:
 
 ```bash
-# Export to CSV
-flowmodoro --export ~/Documents/focus_history.csv
+# Export all focus session history to CSV
+flowmodoro --export ~/Desktop/focus_history.csv
 
-# Export to JSON
-flowmodoro --export ~/Documents/focus_history.json
+# Export to JSON format for scripts or custom integrations
+flowmodoro --export ~/Desktop/focus_history.json
 ```
+
+#### Recommended Excel Charts & Setup:
+
+1. **🍩 Donut / Pie Chart (Task Allocation Share)**
+   - **Pivot Table**: Rows = `task`, Values = `Sum of focus_hours`.
+   - **Chart**: Insert Donut Chart $\rightarrow$ Shows percentage share of deep work per subject.
+
+2. **📊 Clustered Column Chart (Daily Target Progress)**
+   - **Pivot Table**: Rows = `date`, Values = `Sum of focus_hours`.
+   - **Chart**: Insert Clustered Column Chart $\rightarrow$ Compares daily focus hours against your 6-hour goal.
+
+3. **📈 Line Trend Chart (Session Flow Endurance)**
+   - **Data**: X-Axis = `date` / `start_time`, Y-Axis = `focus_minutes`.
+   - **Chart**: Insert Line Chart with Markers $\rightarrow$ Tracks whether your continuous flow duration increases over time.
+
+4. **📑 Stacked Bar Chart (Work vs Rest Efficiency)**
+   - **Pivot Table**: Rows = `date`, Values = `Sum of focus_minutes` and `Sum of break_minutes`.
+   - **Chart**: Insert Stacked Bar Chart $\rightarrow$ Visualizes the $1:5$ ratio efficiency between deep work and earned recovery.
+
+
 
 ---
 

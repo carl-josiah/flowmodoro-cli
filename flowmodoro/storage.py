@@ -116,9 +116,13 @@ def sync_markdown_report():
         total_focus = sum(s.get("focus_seconds", 0.0) for s in sessions)
         total_breaks = sum(s.get("break_seconds", 0.0) for s in sessions)
         by_date = {}
+        by_task = {}
         for s in sessions:
             d = s.get("date", date.today().strftime("%Y-%m-%d"))
+            t = s.get("task", "Deep Work")
+            f_sec = s.get("focus_seconds", 0.0)
             by_date.setdefault(d, []).append(s)
+            by_task[t] = by_task.get(t, 0.0) + f_sec
 
         today_str = date.today().strftime("%Y-%m-%d")
         today_sessions = by_date.get(today_str, [])
@@ -134,6 +138,15 @@ def sync_markdown_report():
             f.write(f"| **Total Rest Earned** | `{format_time(total_breaks)}` |\n")
             f.write(f"| **Total Completed Cycles** | `{len(sessions)}` |\n")
             f.write(f"| **Active Days** | `{len(by_date)}` |\n\n")
+
+            if by_task and total_focus > 0:
+                f.write("## 🎯 Focus Share by Topic\n\n| Objective / Task | Focus Time | Share (%) |\n| :--- | :--- | :--- |\n")
+                sorted_tasks = sorted(by_task.items(), key=lambda x: x[1], reverse=True)
+                for t_name, t_sec in sorted_tasks:
+                    pct = (t_sec / total_focus) * 100
+                    f.write(f"| {t_name} | `{format_time(t_sec)}` | `{pct:.1f}%` |\n")
+                f.write("\n")
+
             f.write("## 📝 Session Logs\n\n| Date | Task / Topic | Start | End | Focus | Earned Break |\n| :--- | :--- | :--- | :--- | :--- | :--- |\n")
             for s in reversed(sessions):
                 date_val = s.get('date', '')
@@ -143,6 +156,7 @@ def sync_markdown_report():
                 f_sec = s.get('focus_seconds', 0.0)
                 b_sec = s.get('break_seconds', 0.0)
                 f.write(f"| {date_val} | {task_val} | {start_val} | {end_val} | `{format_short_time(f_sec)}` | `{format_short_time(b_sec)}` |\n")
+
     except Exception as e:
         print(f"\033[1;31mError generating markdown report: {e}\033[0m\n")
 
@@ -237,18 +251,25 @@ def export_data(destination_file):
             if not ext.endswith(".csv"):
                 dest_path += ".csv"
             with open(dest_path, "w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=["date", "task", "start_time", "end_time", "focus_seconds", "break_seconds"])
+                fields = ["date", "task", "start_time", "end_time", "focus_seconds", "focus_minutes", "focus_hours", "break_seconds", "break_minutes"]
+                writer = csv.DictWriter(f, fieldnames=fields)
                 writer.writeheader()
                 for s in sessions:
+                    f_sec = s.get("focus_seconds", 0.0)
+                    b_sec = s.get("break_seconds", 0.0)
                     writer.writerow({
                         "date": s.get("date"),
                         "task": s.get("task", "Deep Work"),
                         "start_time": s.get("start_time"),
                         "end_time": s.get("end_time"),
-                        "focus_seconds": s.get("focus_seconds"),
-                        "break_seconds": s.get("break_seconds")
+                        "focus_seconds": round(f_sec, 2),
+                        "focus_minutes": round(f_sec / 60.0, 2),
+                        "focus_hours": round(f_sec / 3600.0, 2),
+                        "break_seconds": round(b_sec, 2),
+                        "break_minutes": round(b_sec / 60.0, 2)
                     })
         print(f"\033[1;32m✓ Exported {len(sessions)} session(s) successfully to:\033[0m\n  📂 {dest_path}\n")
+
     except Exception as e:
         print(f"\033[1;31mExport failed: {e}\033[0m\n")
 

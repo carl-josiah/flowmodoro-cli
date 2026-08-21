@@ -9,6 +9,16 @@ USER_HOME = os.path.expanduser("~")
 CONFIG_FILE = os.path.join(USER_HOME, ".flowmodoro_config.json")
 DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Flowmodoro")
 
+def sanitize_path(path_str):
+    if not isinstance(path_str, str):
+        return ""
+    cleaned = path_str.strip()
+    if os.name != 'nt':
+        cleaned = cleaned.replace("\\ ", " ").replace("\\-", "-")
+        if "\\" in cleaned and not os.path.exists(cleaned):
+            cleaned = cleaned.replace("\\", "")
+    return cleaned
+
 def get_config():
     cfg = None
     if os.path.exists(CONFIG_FILE):
@@ -27,7 +37,8 @@ def get_config():
     if not isinstance(target_dir, str) or not target_dir.strip():
         cfg["target_dir"] = DEFAULT_TARGET_DIR
     else:
-        cfg["target_dir"] = target_dir.strip()
+        cfg["target_dir"] = sanitize_path(target_dir)
+
 
     cfg.setdefault("focus_sound", None)
     cfg.setdefault("start_sound", None)
@@ -70,7 +81,7 @@ def set_persistent_directory(raw_path):
         print("\033[1;31mError: Invalid directory path specified.\033[0m\n")
         return
 
-    cleaned = raw_path.strip()
+    cleaned = sanitize_path(raw_path)
     if not cleaned:
         print("\033[1;31mError: Path cannot be empty.\033[0m\n")
         return
