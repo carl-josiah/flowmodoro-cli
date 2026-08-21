@@ -7,6 +7,8 @@ from .config import (
     set_max_break,
     set_custom_sound,
     reset_sound_defaults,
+    set_alarm_repeat,
+    set_cue_repeat,
     get_active_paths,
     get_config
 )
@@ -50,8 +52,10 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro --sound-focus <F>   Set custom audio for starting a focus session
   flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
   flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
+  flowmodoro --repeat-focus <M>  Toggle repeating loop for Focus Start (on / off)
+  flowmodoro --repeat-start <M>  Toggle repeating loop for Break Start (on / off)
+  flowmodoro --repeat-stop <M>   Toggle repeating loop for Break End Alarm (on / off)
   flowmodoro --sound-default     Reset all sound cues back to OS system defaults
-
 
 \033[1;33mSESSION PRUNING & HISTORY:\033[0m
   flowmodoro -u, --undo          Remove the most recently recorded session
@@ -75,6 +79,12 @@ class FormattedParser(argparse.ArgumentParser):
             "sound-start": ("--sound-start", None),
             "sound-stop": ("--sound-stop", None),
             "sound-default": ("--sound-default", None),
+            "alarm-repeat": ("--alarm-repeat", None),
+            "repeat-alarm": ("--repeat-alarm", None),
+            "no-repeat-alarm": ("--no-repeat-alarm", None),
+            "repeat-focus": ("--repeat-focus", None),
+            "repeat-start": ("--repeat-start", None),
+            "repeat-stop": ("--repeat-stop", None),
             "max-break": ("--max-break", None),
             "where": ("--where", "-w"),
             "task": ("--task", "-t"),
@@ -103,6 +113,12 @@ def main():
     parser.add_argument("--sound-focus", type=str, help="Set custom focus session start chime")
     parser.add_argument("--sound-start", type=str, help="Set custom break start sound")
     parser.add_argument("--sound-stop", type=str, help="Set custom break complete alarm")
+    parser.add_argument("--alarm-repeat", type=str, help="Toggle break alarm repeat loop (on/off)")
+    parser.add_argument("--repeat-alarm", action="store_true", help="Enable break alarm repeat loop")
+    parser.add_argument("--no-repeat-alarm", action="store_true", help="Disable break alarm repeat loop")
+    parser.add_argument("--repeat-focus", type=str, help="Toggle repeat loop for Focus Start (on/off)")
+    parser.add_argument("--repeat-start", type=str, help="Toggle repeat loop for Break Start (on/off)")
+    parser.add_argument("--repeat-stop", type=str, help="Toggle repeat loop for Break End Alarm (on/off)")
     parser.add_argument("--sound-default", action="store_true", help="Reset sounds to default")
     parser.add_argument("--sounds", action="store_true", help="Browse native system sounds")
     parser.add_argument("--where", "-w", action="store_true", help="Show active config")
@@ -127,6 +143,24 @@ def main():
     if args.sounds:
         interactive_system_sound_picker()
         return
+    if args.repeat_focus:
+        set_cue_repeat("focus_sound", args.repeat_focus)
+        return
+    if args.repeat_start:
+        set_cue_repeat("start_sound", args.repeat_start)
+        return
+    if args.repeat_stop:
+        set_cue_repeat("stop_sound", args.repeat_stop)
+        return
+    if args.alarm_repeat:
+        set_alarm_repeat(args.alarm_repeat)
+        return
+    if args.repeat_alarm:
+        set_alarm_repeat("on")
+        return
+    if args.no_repeat_alarm:
+        set_alarm_repeat("off")
+        return
     if args.sound_focus:
         set_custom_sound("focus_sound", args.sound_focus)
         return
@@ -143,15 +177,21 @@ def main():
         target_dir, data_file, md_file = get_active_paths()
         cfg = get_config()
         max_b = f"{cfg.get('max_break_minutes'):g} min" if cfg.get("max_break_minutes") else "Disabled (Uncapped)"
+        f_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_focus_sound", False) else " \033[0;33m[Single Chime]\033[0m"
+        b_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_start_sound", False) else " \033[0;33m[Single Chime]\033[0m"
+        a_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_stop_sound", True) else " \033[0;33m[Single Chime]\033[0m"
+
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
         print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 6.0):g} hours/day\033[0m")
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
         print(f"💾 JSONL Data Store       : \033[0;32m{data_file}\033[0m")
-        print(f"🎵 Focus Start Audio      : \033[0;33m{cfg.get('focus_sound') or 'System Default'}\033[0m")
-        print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m")
-        print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m\n")
+        print(f"🎵 Focus Start Audio      : \033[0;33m{cfg.get('focus_sound') or 'System Default'}\033[0m{f_rep}")
+        print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m{b_rep}")
+        print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m{a_rep}\n")
         return
+
+
 
     if args.stats:
         display_dashboard(filter_task=args.task)

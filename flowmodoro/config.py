@@ -32,6 +32,15 @@ def get_config():
     cfg.setdefault("focus_sound", None)
     cfg.setdefault("start_sound", None)
     cfg.setdefault("stop_sound", None)
+    cfg.setdefault("repeat_focus_sound", False)
+    cfg.setdefault("repeat_start_sound", False)
+    cfg.setdefault("repeat_stop_sound", True)
+
+    # Legacy support
+    if "repeat_alarm" in cfg:
+        cfg["repeat_stop_sound"] = bool(cfg.get("repeat_alarm"))
+
+
 
 
     goal = cfg.get("daily_goal_hours")
@@ -152,8 +161,42 @@ def reset_sound_defaults():
     config["focus_sound"] = None
     config["start_sound"] = None
     config["stop_sound"] = None
+    config["repeat_focus_sound"] = False
+    config["repeat_start_sound"] = False
+    config["repeat_stop_sound"] = True
+    if "repeat_alarm" in config:
+        del config["repeat_alarm"]
     save_config(config)
     print("\033[1;32m✓ Audio alerts reset to system default chimes.\033[0m\n")
+
+def set_cue_repeat(cue_key, val_str):
+    labels = {
+        "focus_sound": "Focus Start",
+        "start_sound": "Break Start",
+        "stop_sound": "Break End Alarm"
+    }
+    label = labels.get(cue_key, cue_key)
+    if not val_str or not isinstance(val_str, str):
+        print(f"\033[1;31mError: Please specify 'on' or 'off' for [{label}] repeat setting.\033[0m\n")
+        return
+    cleaned = val_str.strip().lower()
+    config = get_config()
+    target_key = f"repeat_{cue_key}"
+    if cleaned in ("off", "false", "no", "0", "disable", "disabled", "single"):
+        config[target_key] = False
+        save_config(config)
+        print(f"\033[1;32m✓ Repeat loop for [{label}] disabled (chimes once).\033[0m\n")
+    elif cleaned in ("on", "true", "yes", "1", "enable", "enabled", "loop"):
+        config[target_key] = True
+        save_config(config)
+        print(f"\033[1;32m✓ Repeat loop for [{label}] enabled (loops until dismissed).\033[0m\n")
+    else:
+        print(f"\033[1;31mError: Invalid option for [{label}] repeat. Use 'on' or 'off'.\033[0m\n")
+
+def set_alarm_repeat(val_str):
+    set_cue_repeat("stop_sound", val_str)
+
+
 
 
 def get_active_paths():

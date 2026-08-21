@@ -126,6 +126,12 @@ def interactive_system_sound_picker():
 
             if confirm != 'n':
                 set_custom_sound(target_key, selected["path"])
+                try:
+                    repeat_input = input(f"Enable repeating audio loop for [{target_label}]? [y/N]: ").strip().lower()
+                    from .config import set_cue_repeat
+                    set_cue_repeat(target_key, "on" if repeat_input == 'y' else "off")
+                except (KeyboardInterrupt, EOFError):
+                    pass
                 break
         else:
             print("\033[1;31mInvalid number. Try again.\033[0m")
@@ -187,24 +193,37 @@ def trigger_alert(sound_type="stop_sound"):
         play_default_beep()
 
 def ring_alarm_until_dismissed():
-    stop_event = threading.Event()
-    
+    config = get_config()
+    repeat_enabled = config.get("repeat_stop_sound", True)
+
     # Trigger desktop banner
     send_desktop_notification("⚡ Flowmodoro", "Break is complete! Time to resume your deep work session.")
 
-    def _alarm_loop():
-        while not stop_event.is_set():
-            trigger_alert("stop_sound")
-            stop_event.wait(1.8)
+    if repeat_enabled:
+        stop_event = threading.Event()
 
-    alarm_thread = threading.Thread(target=_alarm_loop, daemon=True)
-    alarm_thread.start()
-    print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm and start next session... <<<\033[0m")
-    try:
-        input()
-    except (KeyboardInterrupt, EOFError):
-        pass
-    finally:
-        stop_event.set()
-        alarm_thread.join()
+        def _alarm_loop():
+            while not stop_event.is_set():
+                trigger_alert("stop_sound")
+                stop_event.wait(1.8)
+
+        alarm_thread = threading.Thread(target=_alarm_loop, daemon=True)
+        alarm_thread.start()
+        print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm and start next session... <<<\033[0m")
+        try:
+            input()
+        except (KeyboardInterrupt, EOFError):
+            pass
+        finally:
+            stop_event.set()
+            alarm_thread.join()
+    else:
+        trigger_alert("stop_sound")
+        print("\n\n\033[1;33m>>> Break complete! Press [Enter] to start next session... <<<\033[0m")
+        try:
+            input()
+        except (KeyboardInterrupt, EOFError):
+            pass
+
+
 

@@ -1,24 +1,23 @@
 # ⚡ Flowmodoro CLI & Deep Work Tracker
 
-> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring desktop banner notifications, 28-day activity heatmaps, CSV/JSON exports, and customizable daily goals.
+> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration).
 
 ---
 
 ## 📖 Table of Contents
 
 - [What is Flowmodoro?](#-what-is-flowmodoro)
-- [Key Features](#-key-features)
 - [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [CLI Command Reference](#-cli-command-reference)
-- [Daily Focus Goals & Break Limits](#-daily-focus-goals--break-limits)
-- [Analytics & Activity Heatmap](#-analytics--activity-heatmap)
-- [Data Export (CSV & JSON)](#-data-export-csv--json)
-- [Audio & Alarm System](#-audio--alarm-system)
-- [Persistent Storage & Markdown Sync](#-persistent-storage--markdown-sync)
-- [Session Management & Pruning](#-session-management--pruning)
+- [Quick Start (Minimalist Core)](#-quick-start-minimalist-core)
+- [Basic Command Reference](#-basic-command-reference)
+- [⚙️ Advanced Options & Settings](#%EF%B8%8F-advanced-options--settings)
+  - [Daily Focus Goals & Break Limits](#-daily-focus-goals--break-limits)
+  - [Analytics & Activity Heatmap](#-analytics--activity-heatmap)
+  - [Audio & Per-Cue Repeat Controls](#-audio--per-cue-repeat-controls)
+  - [Vault & Persistent Storage](#-vault--persistent-storage)
+  - [Session Pruning & History](#-session-pruning--history)
+  - [Data Export (CSV & JSON)](#-data-export-csv--json)
 - [Project Architecture](#-project-architecture)
-
 
 ---
 
@@ -34,19 +33,6 @@ Standard Pomodoro forces artificial 25-minute cutoffs that disrupt deep cognitiv
    - $50\text{ min}$ Focus $\rightarrow 10\text{ min}$ Earned Break
    - $75\text{ min}$ Focus $\rightarrow 15\text{ min}$ Earned Break
    - $90\text{ min}$ Focus $\rightarrow 18\text{ min}$ Earned Break
-
----
-
-## ✨ Key Features
-
-- **Desktop Banner Notifications:** Native notifications via `osascript` (macOS), `notify-send` (Linux), and PowerShell (Windows).
-- **28-Day Consistency Heatmap:** Terminal GitHub-style contribution graph (`░ ▒ ▓ █`) tracking daily habit momentum.
-- **Task & Tag Analytics:** Filter focus metrics by specific subjects (`flowmodoro --stats -t "Math"`).
-- **Configurable Break Cap (`--max-break`):** Limit maximum rest to prevent long flow sessions from derailing momentum.
-- **CSV & JSON Data Export (`--export`):** One-click exports to import into Excel, Notion, or Google Sheets.
-- **Customizable Daily Goals (`--goal`):** Configurable target (e.g. 4h, 6h, 8h/day).
-- **Global Terminal Access:** Run `flowmodoro` from any directory.
-- **Zero External Dependencies:** Built purely with Python 3 standard libraries.
 
 ---
 
@@ -75,66 +61,49 @@ pip install -e .
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Minimalist Core)
+
+Keep it simple. You don't need any complex setup or flags to start tracking:
 
 1. **Start an interactive focus session:**
    ```bash
    flowmodoro
    ```
 2. **Set a Task & Focus:**
-   - Enter your focus task/topic (e.g., `Distributed Systems`, `Linear Algebra`).
+   - Enter your focus task/topic (or press Enter for `'Deep Work'`).
    - Work uninterrupted. Press **`Ctrl + C`** when your flow breaks.
-   - Earned rest is calculated automatically. Press **`Y`** to begin the countdown.
+   - Earned rest is calculated automatically. Press **`Y`** to start the rest countdown.
 3. **Dismiss the Alarm:**
-   - When the break reaches `00:00`, the terminal chime rings and a desktop banner appears.
-   - Press **`[Enter]`** to dismiss the alarm.
+   - When break reaches `00:00`, a chime rings and a desktop notification appears.
+   - Press **`[Enter]`** to start your next session.
 
 ---
 
-## 💻 CLI Command Reference
+## 💻 Basic Command Reference
 
-```text
-======================================================================
-                 ⚡ FLOWMODORO CLI HELP & COMMANDS ⚡
-======================================================================
+For everyday minimalist usage, you only need these three core commands:
 
-USAGE:
-  flowmodoro [OPTIONS]
+```bash
+# 1. Start a default focus session
+flowmodoro
 
-CORE COMMANDS:
-  flowmodoro                     Start an interactive focus & flow session
-  flowmodoro -t, --task <NAME>   Start session directly with designated task name
-  flowmodoro -s, --stats         Display analytics dashboard & 28-day heatmap
-  flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
+# 2. Start a session directly with a specific task name
+flowmodoro -t "Distributed Systems"
 
-GOALS, LIMITS & STORAGE:
-  flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 6h)
-  flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
-  flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
-  flowmodoro -w, --where         Show current storage paths, audio settings & goal
-  flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
-
-AUDIO CONFIGURATION:
-  flowmodoro --sounds            Interactive browser to preview & select OS native sounds
-  flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
-  flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
-  flowmodoro --sound-default     Reset all sound cues back to OS system defaults
-
-SESSION PRUNING & HISTORY:
-  flowmodoro -u, --undo          Remove the most recently recorded session
-  flowmodoro -d, --delete        Interactively browse and delete specific logs
-
-HELP:
-  flowmodoro -h, --help          Show this command reference
-======================================================================
+# 3. View your 28-day consistency heatmap & daily summary
+flowmodoro -s
 ```
 
 ---
 
-## 🎯 Daily Focus Goals & Break Limits
+## ⚙️ Advanced Options & Settings
+
+For power users who want custom audio files, vault integration, break capping, or history pruning:
+
+### 🎯 Daily Focus Goals & Break Limits
 
 ```bash
-# Set daily target to 4 hours
+# Set daily focus target to 4 hours (default: 6h)
 flowmodoro --goal 4
 
 # Cap breaks at 20 minutes max (prevents 40-minute breaks after 3h sessions)
@@ -144,9 +113,7 @@ flowmodoro --max-break 20
 flowmodoro --max-break 0
 ```
 
----
-
-## 📊 Analytics & Activity Heatmap
+### 📊 Analytics & Activity Heatmap
 
 ```bash
 # General overview with 28-day heatmap & top topics
@@ -180,11 +147,6 @@ flowmodoro --stats -t "Algorithms"
   2026-08-20 | 06:00:00    | [████████████] 100%
   2026-08-21 | 04:15:30    | [████████░░░░] 71% (Today)
 
-🏷️  Top Focus Objectives:
-  • Distributed Systems    : 18h 40m 10s  (49%)
-  • Math Proofs            : 12h 10m 00s  (32%)
-  • Paper Drafting         : 07h 16m 15s  (19%)
-
 🏆 Summary Highlights:
   • Daily Target    : 6 hour(s)/day
   • Total Focus     : 38h 06m 25s across 28 cycle(s)
@@ -193,11 +155,51 @@ flowmodoro --stats -t "Algorithms"
 ==============================================================
 ```
 
----
+### 🔔 Audio & Per-Cue Repeat Controls
 
-## 💾 Data Export (CSV & JSON)
+Customize sound cues and control whether sounds play once or loop continuously:
 
-Export your logs to analyze in Notion, Google Sheets, or Excel:
+```bash
+# 1. Interactive browser to preview & select built-in OS sounds
+flowmodoro --sounds
+
+# 2. Set custom audio files (.mp3, .wav, .m4a)
+flowmodoro --sound-focus ~/Music/focus_start.wav
+flowmodoro --sound-start ~/Music/break_chime.wav
+flowmodoro --sound-stop ~/Music/alarm_chime.mp3
+
+# 3. Toggle repeat loops per audio cue individually (on / off)
+flowmodoro --repeat-focus off    # Focus Start: single chime (default)
+flowmodoro --repeat-start off    # Break Start: single chime (default)
+flowmodoro --repeat-stop off     # Break End Alarm: single chime (or 'on' for looping)
+
+# 4. Reset all audio alerts back to OS system defaults
+flowmodoro --sound-default
+```
+
+### 📂 Vault & Persistent Storage
+
+Every session is automatically logged to `flowmodoro_data.jsonl` and auto-synced to a formatted Markdown journal (`flowmodoro_log.md`).
+
+```bash
+# View active storage paths, audio settings, and goal settings
+flowmodoro --where
+
+# Point persistent log directory to an Obsidian or Logseq vault
+flowmodoro --path ~/Documents/ObsidianVault/Flowmodoro
+```
+
+### 🗑️ Session Pruning & History
+
+```bash
+# Undo / remove the most recent session
+flowmodoro --undo
+
+# Interactively browse and delete specific logs
+flowmodoro --delete
+```
+
+### 💾 Data Export (CSV & JSON)
 
 ```bash
 # Export to CSV
@@ -209,58 +211,7 @@ flowmodoro --export ~/Documents/focus_history.json
 
 ---
 
-## 🔔 Audio & Alarm System
-
-Customize audio cues for break starts and break completion alarms:
-
-```bash
-# Open interactive sound browser to preview & select OS native sounds
-flowmodoro --sounds
-
-# Set custom audio files (.mp3, .wav, .m4a)
-flowmodoro --sound-focus ~/Music/focus_start.wav
-flowmodoro --sound-start ~/Music/break_chime.wav
-flowmodoro --sound-stop ~/Music/alarm_chime.mp3
-
-# Reset all audio alerts back to OS system defaults
-flowmodoro --sound-default
-
-```
-
----
-
-## 📂 Persistent Storage & Markdown Sync
-
-Every session is automatically logged to two formats:
-1. **`flowmodoro_data.jsonl`**: Raw JSON Lines data store for analytics and exports.
-2. **`flowmodoro_log.md`**: Beautifully formatted Markdown journal with summary metrics and table logs (perfect for Obsidian, Logseq, or PKM vaults).
-
-```bash
-# View active storage paths, audio settings, and goal settings
-flowmodoro --where
-
-# Change persistent log directory (e.g. point to an Obsidian vault)
-flowmodoro --path ~/Documents/ObsidianVault/Flowmodoro
-```
-
----
-
-## 🗑️ Session Management & Pruning
-
-Accidentally recorded a session or need to remove an outlier?
-
-```bash
-# Undo / remove the most recent session
-flowmodoro --undo
-
-# Interactively browse and select specific sessions to delete
-flowmodoro --delete
-```
-
----
-
 ## 🏗️ Project Architecture
-
 
 ```text
 flowmodoro-cli/
@@ -283,3 +234,4 @@ flowmodoro-cli/
 ## 📄 License
 
 This is free and unencumbered software released into the public domain ([The Unlicense](LICENSE)).
+
