@@ -3,7 +3,7 @@ import sys
 import time
 from datetime import datetime
 from .config import get_active_paths, get_config
-from .audio import trigger_alert, ring_alarm_until_dismissed, send_desktop_notification, send_phone_notification
+from .audio import trigger_alert, ring_alarm_until_dismissed
 from .storage import format_short_time, format_time
 
 def run_focus_session(task_name="Deep Work"):
@@ -43,13 +43,6 @@ def run_break_session(break_seconds):
     print("=== FLOWMODORO: EARNED REST ===")
     print(f"Break Duration: \033[1;34m{format_short_time(actual_break)}\033[0m{capped_note}")
     print("Step away from the screen, hydrate, and relax. [Ctrl + C] to skip.\n")
-    
-    send_phone_notification(
-        "⚡ Flowmodoro Rest Period",
-        f"You earned {format_time(actual_break)} of rest. Step away from your desk!",
-        priority="low",
-        tags="coffee,hourglass"
-    )
 
     remaining = int(actual_break)
     try:

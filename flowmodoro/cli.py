@@ -5,7 +5,6 @@ from .config import (
     set_persistent_directory,
     set_daily_goal,
     set_max_break,
-    set_notify_topic,
     set_custom_sound,
     reset_sound_defaults,
     get_active_paths,
@@ -21,7 +20,7 @@ from .storage import (
 )
 from .dashboard import display_dashboard
 from .timers import run_focus_session, run_break_session
-from .audio import interactive_system_sound_picker, send_phone_notification
+from .audio import interactive_system_sound_picker
 
 class FormattedParser(argparse.ArgumentParser):
     def format_help(self):
@@ -46,11 +45,6 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro -w, --where         Show current storage paths, audio settings & goal
   flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
 
-\033[1;33mPHONE NOTIFICATIONS (ntfy.sh):\033[0m
-  flowmodoro --notify <TOPIC>    Subscribe to instant mobile break alerts
-  flowmodoro --notify-test       Send a test push notification to your phone
-  flowmodoro --notify-off        Disable mobile push notifications
-
 \033[1;33mAUDIO CONFIGURATION:\033[0m
   flowmodoro --sounds            Interactive browser to preview & select OS native sounds
   flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
@@ -72,9 +66,6 @@ def main():
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
     parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
     parser.add_argument("--export", "-e", type=str, help="Export logs to CSV or JSON")
-    parser.add_argument("--notify", type=str, help="Set mobile ntfy.sh notification topic")
-    parser.add_argument("--notify-test", action="store_true", help="Send a test notification to phone")
-    parser.add_argument("--notify-off", action="store_true", help="Disable mobile notifications")
     parser.add_argument("--sound-start", type=str, help="Set custom break start sound")
     parser.add_argument("--sound-stop", type=str, help="Set custom break complete alarm")
     parser.add_argument("--sound-default", action="store_true", help="Reset sounds to default")
@@ -91,21 +82,6 @@ def main():
         return
     if args.max_break is not None:
         set_max_break(args.max_break)
-        return
-    if args.notify:
-        set_notify_topic(args.notify)
-        return
-    if args.notify_off:
-        set_notify_topic("off")
-        return
-    if args.notify_test:
-        cfg = get_config()
-        topic = cfg.get("ntfy_topic")
-        if not topic:
-            print("\n\033[1;31mNo notification topic configured. Run 'flowmodoro --notify <my-topic>' first.\033[0m\n")
-        else:
-            send_phone_notification("⚡ Flowmodoro Test", f"Test alert sent to topic '{topic}'! Your setup is working.", priority="high", tags="test_tube,tada")
-            print(f"\n\033[1;32m✓ Test notification dispatched to ntfy topic: '{topic}'\033[0m\n")
         return
     if args.path:
         set_persistent_directory(args.path)
@@ -129,11 +105,9 @@ def main():
         target_dir, data_file, md_file = get_active_paths()
         cfg = get_config()
         max_b = f"{cfg.get('max_break_minutes'):g} min" if cfg.get("max_break_minutes") else "Disabled (Uncapped)"
-        topic = f"ntfy.sh/{cfg.get('ntfy_topic')}" if cfg.get("ntfy_topic") else "Disabled"
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
         print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 6.0):g} hours/day\033[0m")
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
-        print(f"📱 Phone Push Alerts      : \033[0;33m{topic}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
         print(f"💾 JSONL Data Store       : \033[0;32m{data_file}\033[0m")
         print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m")

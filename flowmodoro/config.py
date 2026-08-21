@@ -18,7 +18,6 @@ def get_config():
                 cfg.setdefault("stop_sound", None)
                 cfg.setdefault("daily_goal_hours", DEFAULT_GOAL_HOURS)
                 cfg.setdefault("max_break_minutes", DEFAULT_MAX_BREAK_MINS)
-                cfg.setdefault("ntfy_topic", None)
                 return cfg
         except Exception:
             pass
@@ -27,8 +26,7 @@ def get_config():
         "start_sound": None,
         "stop_sound": None,
         "daily_goal_hours": DEFAULT_GOAL_HOURS,
-        "max_break_minutes": DEFAULT_MAX_BREAK_MINS,
-        "ntfy_topic": None
+        "max_break_minutes": DEFAULT_MAX_BREAK_MINS
     }
 
 def save_config(config_data):
@@ -70,21 +68,6 @@ def set_max_break(minutes_str):
             print(f"\033[1;32m✓ Maximum break duration capped at: {mins:g} minutes\033[0m\n")
     except ValueError:
         print("\033[1;31mError: Please enter a valid number of minutes (e.g. 15, 20, 30).\033[0m\n")
-
-def set_notify_topic(topic_str):
-    topic = topic_str.strip()
-    config = get_config()
-    if not topic or topic.lower() in ["off", "disable", "none"]:
-        config["ntfy_topic"] = None
-        save_config(config)
-        print("\033[1;32m✓ Phone notifications disabled.\033[0m\n")
-        return
-
-    config["ntfy_topic"] = topic
-    save_config(config)
-    print(f"\033[1;32m✓ Phone notification channel set to:\033[0m")
-    print(f"  📱 Topic: \033[1;36m{topic}\033[0m")
-    print(f"  Install 'ntfy' on iOS/Android & subscribe to '{topic}' to receive instant push alerts.\n")
 
 def set_custom_sound(sound_type, file_path):
     expanded_path = os.path.abspath(os.path.expanduser(file_path.strip()))

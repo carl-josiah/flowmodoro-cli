@@ -3,8 +3,6 @@ import sys
 import subprocess
 import platform
 import threading
-import urllib.request
-import urllib.parse
 from .config import get_config, set_custom_sound
 
 # --- Desktop Banner Notifications ---
@@ -29,34 +27,6 @@ def send_desktop_notification(title, message):
             subprocess.Popen(["powershell", "-c", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
         pass
-
-# --- Phone Push Notifications (ntfy.sh integration) ---
-def send_phone_notification(title, message, priority="default", tags="alarm_clock"):
-    """Sends zero-auth mobile push notifications via ntfy.sh."""
-    config = get_config()
-    topic = config.get("ntfy_topic")
-    if not topic:
-        return
-
-    def _send():
-        try:
-            url = f"https://ntfy.sh/{urllib.parse.quote(topic)}"
-            req = urllib.request.Request(
-                url,
-                data=message.encode("utf-8"),
-                headers={
-                    "Title": title,
-                    "Priority": priority,
-                    "Tags": tags,
-                    "User-Agent": "Flowmodoro-CLI/1.0"
-                },
-                method="POST"
-            )
-            urllib.request.urlopen(req, timeout=4)
-        except Exception:
-            pass
-
-    threading.Thread(target=_send, daemon=True).start()
 
 # --- System Sound Discovery & Browser ---
 def get_system_sound_dir():
@@ -183,9 +153,8 @@ def trigger_alert(sound_type="stop_sound"):
 def ring_alarm_until_dismissed():
     stop_event = threading.Event()
     
-    # Trigger notifications simultaneously
+    # Trigger desktop banner
     send_desktop_notification("⚡ Flowmodoro", "Break is complete! Time to resume your deep work session.")
-    send_phone_notification("⚡ Flowmodoro Break Ended", "Your earned recovery is complete. Ready for flow state?", priority="high", tags="zap,rotating_light")
 
     def _alarm_loop():
         while not stop_event.is_set():

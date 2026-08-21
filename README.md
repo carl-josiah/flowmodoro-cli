@@ -1,6 +1,6 @@
 # ⚡ Flowmodoro CLI & Deep Work Tracker
 
-> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring mobile push notifications to your phone, desktop banners, 28-day activity heatmaps, CSV/JSON exports, and customizable daily goals.
+> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring desktop banner notifications, 28-day activity heatmaps, CSV/JSON exports, and customizable daily goals.
 
 ---
 
@@ -11,7 +11,6 @@
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [CLI Command Reference](#-cli-command-reference)
-- [Phone Notifications Setup](#-phone-notifications-setup)
 - [Daily Focus Goals & Break Limits](#-daily-focus-goals--break-limits)
 - [Analytics & Activity Heatmap](#-analytics--activity-heatmap)
 - [Data Export (CSV & JSON)](#-data-export-csv--json)
@@ -38,7 +37,6 @@ Standard Pomodoro forces artificial 25-minute cutoffs that disrupt deep cognitiv
 
 ## ✨ Key Features
 
-- **Instant Phone Alerts (iOS & Android):** Zero-signup mobile push notifications via open-source `ntfy.sh` alerting you the moment a break ends.
 - **Desktop Banner Notifications:** Native notifications via `osascript` (macOS), `notify-send` (Linux), and PowerShell (Windows).
 - **28-Day Consistency Heatmap:** Terminal GitHub-style contribution graph (`░ ▒ ▓ █`) tracking daily habit momentum.
 - **Task & Tag Analytics:** Filter focus metrics by specific subjects (`flowmodoro --stats -t "Math"`).
@@ -86,7 +84,7 @@ pip install -e .
    - Work uninterrupted. Press **`Ctrl + C`** when your flow breaks.
    - Earned rest is calculated automatically. Press **`Y`** to begin the countdown.
 3. **Dismiss the Alarm:**
-   - When the break reaches `00:00`, the terminal chime rings, a desktop banner appears, and a push alert is sent to your phone.
+   - When the break reaches `00:00`, the terminal chime rings and a desktop banner appears.
    - Press **`[Enter]`** to dismiss the alarm.
 
 ---
@@ -114,11 +112,6 @@ GOALS, LIMITS & STORAGE:
   flowmodoro -w, --where         Show current storage paths, audio settings & goal
   flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
 
-PHONE NOTIFICATIONS (ntfy.sh):
-  flowmodoro --notify <TOPIC>    Subscribe to instant mobile break alerts
-  flowmodoro --notify-test       Send a test push notification to your phone
-  flowmodoro --notify-off        Disable mobile push notifications
-
 AUDIO CONFIGURATION:
   flowmodoro --sounds            Interactive browser to preview & select OS native sounds
   flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
@@ -133,24 +126,6 @@ HELP:
   flowmodoro -h, --help          Show this command reference
 ======================================================================
 ```
-
----
-
-## 📱 Phone Notifications Setup
-
-You can receive push notifications on your phone when breaks start and finish using the free, open-source **[ntfy](https://ntfy.sh)** app (available on iOS & Android, zero signup required):
-
-1. **Install the `ntfy` app** on your phone from the App Store or Google Play.
-2. **Choose a unique topic name** (e.g., `flow-john-9281`) and tap **Subscribe** in the app.
-3. **Configure Flowmodoro with your topic (run once):**
-   ```bash
-   flowmodoro --notify flow-john-9281
-   ```
-4. **Send a test notification to verify:**
-   ```bash
-   flowmodoro --notify-test
-   ```
-   *Your phone will immediately receive a push notification!*
 
 ---
 
@@ -244,7 +219,7 @@ flowmodoro-cli/
     ├── __init__.py             # Package initializer
     ├── cli.py                  # CLI argument parser & help menu
     ├── config.py               # Persistent config (~/.flowmodoro_config.json)
-    ├── audio.py                # Sound player, desktop banners & mobile notifications
+    ├── audio.py                # Sound player, preview browser & desktop banners
     ├── storage.py              # JSONL storage, Markdown sync & CSV/JSON exports
     ├── dashboard.py            # Heatmaps, task filters & ASCII progress charts
     └── timers.py               # Stopwatch flow loop & capped break countdowns
