@@ -125,14 +125,35 @@ def main():
 
     task = args.task or "Deep Work"
     if not args.task:
-        prompt = input("Enter focus task/topic (Press Enter for 'Deep Work'): ").strip()
-        if prompt:
-            task = prompt
+        try:
+            prompt = input("Enter focus task/topic (Press Enter for 'Deep Work'): ").strip()
+            if prompt:
+                task = prompt
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession canceled.")
+            return
 
     total_day_focus = 0
     _, _, md_file = get_active_paths()
     while True:
-        focus_seconds, start_dt, end_dt = run_focus_session(task_name=task)
+        try:
+            focus_seconds, start_dt, end_dt = run_focus_session(task_name=task)
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
+        if focus_seconds < 1.0:
+            print("\nFocus session too short (< 1s), session not logged.")
+            try:
+                retry = input("Start another session? [Y/n]: ").strip().lower()
+                if retry == 'n':
+                    print("Session ended. Great work today!")
+                    break
+                continue
+            except (KeyboardInterrupt, EOFError):
+                print("\nSession ended. Great work today!")
+                break
+
         total_day_focus += focus_seconds
         earned_break = focus_seconds * BREAK_RATIO
 
@@ -142,7 +163,12 @@ def main():
         print(f"Total Today:       {format_time(total_day_focus)}")
         print(f"\033[0;32m✓ Saved to {md_file}\033[0m")
 
-        choice = input("\nStart earned break now? [Y/n/q]: ").strip().lower()
+        try:
+            choice = input("\nStart earned break now? [Y/n/q]: ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
         if choice == 'q':
             print("Session ended. Great work today!")
             break
@@ -150,4 +176,9 @@ def main():
             run_break_session(earned_break)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KeyboardInterrupt, EOFError):
+        print("\nGoodbye!")
+        sys.exit(0)
+

@@ -1,20 +1,31 @@
 import os
+import math
 from datetime import date, timedelta, datetime
 from .config import get_active_paths, get_config
 from .storage import load_all_sessions, format_time, format_short_time
 
 def render_ascii_bar(progress, width=20):
-    filled = int(round(progress * width))
+    try:
+        if progress is None or not isinstance(progress, (int, float)) or not math.isfinite(progress):
+            p = 0.0
+        else:
+            p = max(0.0, min(1.0, float(progress)))
+    except Exception:
+        p = 0.0
+
+    filled = int(round(p * width))
     filled = min(width, max(0, filled))
-    return f"[{'█' * filled}{'░' * (width - filled)}] {int(progress * 100)}%"
+    return f"[{'█' * filled}{'░' * (width - filled)}] {int(p * 100)}%"
 
 def render_activity_heatmap(daily_totals, target_seconds):
     today = date.today()
     output = []
+    t_sec = float(target_seconds) if (isinstance(target_seconds, (int, float)) and math.isfinite(target_seconds) and target_seconds > 0) else 21600.0
+
     for i in range(27, -1, -1):
         d_str = (today - timedelta(days=i)).strftime("%Y-%m-%d")
         sec = daily_totals.get(d_str, 0)
-        ratio = sec / target_seconds if target_seconds > 0 else 0
+        ratio = sec / t_sec if t_sec > 0 else 0
         if ratio == 0:
             output.append("·")
         elif ratio < 0.35:
@@ -33,7 +44,10 @@ def display_dashboard(filter_task=None):
     target_dir, _, md_file = get_active_paths()
     config = get_config()
     goal_hours = config.get("daily_goal_hours", 6.0)
-    DAILY_GOAL_SECONDS = goal_hours * 3600
+    if not isinstance(goal_hours, (int, float)) or not math.isfinite(goal_hours) or goal_hours <= 0:
+        goal_hours = 6.0
+
+    DAILY_GOAL_SECONDS = max(1.0, float(goal_hours) * 3600)
 
     all_sessions = load_all_sessions()
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -45,8 +59,8 @@ def display_dashboard(filter_task=None):
         print(f"\nNo recorded sessions found yet.\n📂 Active Path: \033[0;36m{target_dir}\033[0m\n")
         return
 
-    if filter_task:
-        sessions = [s for s in all_sessions if filter_task.lower() in s.get("task", "").lower()]
+    if filter_task and isinstance(filter_task, str):
+        sessions = [s for s in all_sessions if filter_task.lower() in str(s.get("task", "")).lower()]
         print(f"\n🎯 Filter Active: \033[1;36m'{filter_task}'\033[0m ({len(sessions)} matching sessions)")
     else:
         sessions = all_sessions
@@ -61,18 +75,19 @@ def display_dashboard(filter_task=None):
     task_totals = {}
     
     for s in sessions:
-        d = s["date"]
-        t = s.get("task", "Deep Work")
-        daily_totals[d] = daily_totals.get(d, 0) + s["focus_seconds"]
-        task_totals[t] = task_totals.get(t, 0) + s["focus_seconds"]
+        d = s.get("date", today_str)
+        t = str(s.get("task", "Deep Work"))
+        f_sec = s.get("focus_seconds", 0.0)
+        daily_totals[d] = daily_totals.get(d, 0.0) + f_sec
+        task_totals[t] = task_totals.get(t, 0.0) + f_sec
 
-    today_focus = daily_totals.get(today_str, 0)
-    total_focus = sum(s["focus_seconds"] for s in sessions)
+    today_focus = daily_totals.get(today_str, 0.0)
+    total_focus = sum(s.get("focus_seconds", 0.0) for s in sessions)
     goal_str = format_short_time(DAILY_GOAL_SECONDS)
 
     print(f"\n📅 Today ({today_str}):")
     print(f"  • Focus Logged : \033[1;32m{format_time(today_focus)}\033[0m")
-    print(f"  • Daily Goal   : {render_ascii_bar(min(1.0, today_focus / DAILY_GOAL_SECONDS))} ({format_short_time(today_focus)} / {goal_str})")
+    print(f"  • Daily Goal   : {render_ascii_bar(today_focus / DAILY_GOAL_SECONDS)} ({format_short_time(today_focus)} / {goal_str})")
 
     print(f"\n🗓️  28-Day Consistency Heatmap (Goal: {goal_hours:g}h/day):")
     print(f"  {render_activity_heatmap(daily_totals, DAILY_GOAL_SECONDS)}")
@@ -83,18 +98,26 @@ def display_dashboard(filter_task=None):
     print("  -----------+-------------+-----------------------------")
     for i in range(6, -1, -1):
         d_str = (today_dt - timedelta(days=i)).strftime("%Y-%m-%d")
-        sec = daily_totals.get(d_str, 0)
+        sec = daily_totals.get(d_str, 0.0)
         mark = " (Today)" if d_str == today_str else ""
-        print(f"  {d_str} | {format_short_time(sec):<11} | {render_ascii_bar(min(1.0, sec / DAILY_GOAL_SECONDS), width=12)}{mark}")
+        print(f"  {d_str} | {format_short_time(sec):<11} | {render_ascii_bar(sec / DAILY_GOAL_SECONDS, width=12)}{mark}")
 
     if not filter_task and len(task_totals) > 1:
         print("\n🏷️  Top Focus Objectives:")
         sorted_tasks = sorted(task_totals.items(), key=lambda x: x[1], reverse=True)[:5]
         for t_name, t_sec in sorted_tasks:
             pct = (t_sec / total_focus) * 100 if total_focus > 0 else 0
-            print(f"  • {t_name[:22]:<22} : {format_time(t_sec):<12} ({pct:.0f}%)")
+            safe_tname = str(t_name)[:22]
+            print(f"  • {safe_tname:<22} : {format_time(t_sec):<12} ({pct:.0f}%)")
 
-    sorted_days = sorted([datetime.strptime(d, "%Y-%m-%d").date() for d in daily_totals.keys()])
+    valid_dates = []
+    for d in daily_totals.keys():
+        try:
+            valid_dates.append(datetime.strptime(d, "%Y-%m-%d").date())
+        except (ValueError, TypeError):
+            pass
+
+    sorted_days = sorted(valid_dates)
     current_streak = 0
     check_day = today_dt if today_dt in sorted_days else today_dt - timedelta(days=1)
     while check_day in sorted_days:
@@ -106,3 +129,4 @@ def display_dashboard(filter_task=None):
     print(f"  • Total Focus     : {format_time(total_focus)} across {len(sessions)} cycle(s)")
     print(f"  • Current Streak  : \033[1;33m{current_streak} day(s)\033[0m")
     print(f"  • Active Vault    : \033[0;36m{md_file}\033[0m\n" + "=" * 62 + "\n")
+

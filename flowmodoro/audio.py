@@ -9,20 +9,25 @@ from .config import get_config, set_custom_sound
 def send_desktop_notification(title, message):
     """Zero-dependency desktop notification for macOS, Linux, and Windows."""
     system = platform.system()
+    safe_title = str(title).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+    safe_msg = str(message).replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ")
+
     try:
         if system == "Darwin":  # macOS
-            script = f'display notification "{message}" with title "{title}" sound name "Glass"'
+            script = f'display notification "{safe_msg}" with title "{safe_title}" sound name "Glass"'
             subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif system == "Linux":
             if os.system("which notify-send > /dev/null 2>&1") == 0:
-                subprocess.Popen(["notify-send", title, message], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                subprocess.Popen(["notify-send", safe_title, safe_msg], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif system == "Windows":
+            ps_title = safe_title.replace("'", "''")
+            ps_msg = safe_msg.replace("'", "''")
             ps_cmd = (
                 '[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); '
                 '$notify = New-Object System.Windows.Forms.NotifyIcon; '
                 '$notify.Icon = [System.Drawing.SystemIcons]::Information; '
                 '$notify.Visible = $true; '
-                f'$notify.ShowBalloonTip(5000, "{title}", "{message}", [System.Windows.Forms.ToolTipIcon]::Info);'
+                f"$notify.ShowBalloonTip(5000, '{ps_title}', '{ps_msg}', [System.Windows.Forms.ToolTipIcon]::Info);"
             )
             subprocess.Popen(["powershell", "-c", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except Exception:
@@ -45,13 +50,16 @@ def list_system_sounds():
         return []
     
     sounds = []
-    for f in sorted(os.listdir(sound_dir)):
-        ext = os.path.splitext(f)[1].lower()
-        if ext in valid_exts:
-            sounds.append({
-                "name": os.path.splitext(f)[0].capitalize(),
-                "path": os.path.join(sound_dir, f)
-            })
+    try:
+        for f in sorted(os.listdir(sound_dir)):
+            ext = os.path.splitext(f)[1].lower()
+            if ext in valid_exts:
+                sounds.append({
+                    "name": os.path.splitext(f)[0].capitalize(),
+                    "path": os.path.join(sound_dir, f)
+                })
+    except Exception:
+        pass
     return sounds
 
 def interactive_system_sound_picker():
@@ -72,7 +80,12 @@ def interactive_system_sound_picker():
     print("\nWhich alert do you want to configure?")
     print("  [1] Focus Complete (Break Start tone)")
     print("  [2] Earned Break Ended (Alarm tone)")
-    target_choice = input("Select [1 or 2, or 'q' to quit]: ").strip().lower()
+    try:
+        target_choice = input("Select [1 or 2, or 'q' to quit]: ").strip().lower()
+    except (KeyboardInterrupt, EOFError):
+        print("\nCanceled.\n")
+        return
+
     if target_choice not in ['1', '2']:
         print("Canceled.\n")
         return
@@ -81,7 +94,12 @@ def interactive_system_sound_picker():
     target_label = "Break Start" if target_choice == '1' else "Break End Alarm"
 
     while True:
-        choice = input(f"\nEnter sound # to preview & select for [{target_label}] (or 'q' to exit): ").strip().lower()
+        try:
+            choice = input(f"\nEnter sound # to preview & select for [{target_label}] (or 'q' to exit): ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print("\nCanceled.\n")
+            return
+
         if choice == 'q' or not choice:
             print("Canceled.\n")
             return
@@ -91,7 +109,12 @@ def interactive_system_sound_picker():
             play_sound_file(selected["path"])
             print(f"🔊 Playing preview: \033[1;36m{selected['name']}\033[0m")
             
-            confirm = input(f"Set '{selected['name']}' as your {target_label} sound? [Y/n]: ").strip().lower()
+            try:
+                confirm = input(f"Set '{selected['name']}' as your {target_label} sound? [Y/n]: ").strip().lower()
+            except (KeyboardInterrupt, EOFError):
+                print("\nCanceled.\n")
+                return
+
             if confirm != 'n':
                 set_custom_sound(target_key, selected["path"])
                 break
@@ -99,15 +122,19 @@ def interactive_system_sound_picker():
             print("\033[1;31mInvalid number. Try again.\033[0m")
 
 def play_sound_file(file_path):
+    if not file_path or not isinstance(file_path, str) or not os.path.isfile(file_path):
+        return
+
     system = platform.system()
     try:
         if system == "Darwin":
             subprocess.Popen(["afplay", file_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif system == "Windows":
+            safe_path = file_path.replace("'", "''")
             ps_cmd = (
                 f"Add-Type -AssemblyName presentationCore; "
                 f"$player = New-Object System.Windows.Media.MediaPlayer; "
-                f"$player.Open([System.Uri]'{file_path}'); "
+                f"$player.Open([System.Uri]'{safe_path}'); "
                 f"$player.Play(); Start-Sleep -Milliseconds 1500"
             )
             subprocess.Popen(["powershell", "-c", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -145,7 +172,7 @@ def play_default_beep():
 def trigger_alert(sound_type="stop_sound"):
     config = get_config()
     sound_path = config.get(sound_type)
-    if sound_path and os.path.exists(sound_path):
+    if sound_path and os.path.exists(sound_path) and os.path.isfile(sound_path):
         play_sound_file(sound_path)
     else:
         play_default_beep()
@@ -166,8 +193,9 @@ def ring_alarm_until_dismissed():
     print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm and start next session... <<<\033[0m")
     try:
         input()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError):
         pass
     finally:
         stop_event.set()
         alarm_thread.join()
+

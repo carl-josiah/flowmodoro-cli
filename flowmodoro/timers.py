@@ -1,6 +1,7 @@
 import os
 import sys
 import time
+import math
 from datetime import datetime
 from .config import get_active_paths, get_config
 from .audio import trigger_alert, ring_alarm_until_dismissed
@@ -9,15 +10,16 @@ from .storage import format_short_time, format_time
 def run_focus_session(task_name="Deep Work"):
     _, _, md_file = get_active_paths()
     os.system('cls' if os.name == 'nt' else 'clear')
+    safe_task = str(task_name) if task_name else "Deep Work"
     print("=== FLOWMODORO: FOCUS MODE ===")
-    print(f"🎯 Objective: \033[1;36m{task_name}\033[0m\n📂 Logging to: \033[0;36m{md_file}\033[0m")
+    print(f"🎯 Objective: \033[1;36m{safe_task}\033[0m\n📂 Logging to: \033[0;36m{md_file}\033[0m")
     print("Tracking deep work. Press [Ctrl + C] when your flow breaks.\n")
     
     start_dt = datetime.now()
     start_time = time.time()
     try:
         while True:
-            elapsed = time.time() - start_time
+            elapsed = max(0.0, time.time() - start_time)
             sys.stdout.write(f"\rFocus Time: \033[1;32m{format_short_time(elapsed)}\033[0m")
             sys.stdout.flush()
             time.sleep(1)
@@ -27,17 +29,24 @@ def run_focus_session(task_name="Deep Work"):
     end_dt = datetime.now()
     trigger_alert("start_sound")
     print("\n\nSession paused.")
-    return time.time() - start_time, start_dt, end_dt
+    elapsed_total = max(0.0, time.time() - start_time)
+    return elapsed_total, start_dt, end_dt
 
 def run_break_session(break_seconds):
+    if not isinstance(break_seconds, (int, float)) or not math.isfinite(break_seconds) or break_seconds <= 0:
+        print("No earned break time available.")
+        return
+
     config = get_config()
     max_mins = config.get("max_break_minutes")
     
     capped_note = ""
-    actual_break = break_seconds
-    if max_mins and (break_seconds > max_mins * 60):
-        actual_break = max_mins * 60
-        capped_note = f" (Capped from {format_short_time(break_seconds)} by max-break limit)"
+    actual_break = max(0.0, float(break_seconds))
+    if isinstance(max_mins, (int, float)) and math.isfinite(max_mins) and max_mins > 0:
+        max_sec = max_mins * 60
+        if actual_break > max_sec:
+            actual_break = max_sec
+            capped_note = f" (Capped from {format_short_time(break_seconds)} by max-break limit)"
 
     os.system('cls' if os.name == 'nt' else 'clear')
     print("=== FLOWMODORO: EARNED REST ===")
@@ -54,3 +63,4 @@ def run_break_session(break_seconds):
         ring_alarm_until_dismissed()
     except KeyboardInterrupt:
         print("\n\nBreak skipped early.")
+
