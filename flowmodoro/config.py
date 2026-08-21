@@ -34,11 +34,15 @@ def get_config():
     cfg.setdefault("stop_sound", None)
     cfg.setdefault("repeat_focus_sound", False)
     cfg.setdefault("repeat_start_sound", False)
+
+    # Legacy support: migrate repeat_alarm to repeat_stop_sound
+    if "repeat_alarm" in cfg:
+        if "repeat_stop_sound" not in cfg:
+            cfg["repeat_stop_sound"] = bool(cfg.get("repeat_alarm"))
+        del cfg["repeat_alarm"]
+
     cfg.setdefault("repeat_stop_sound", True)
 
-    # Legacy support
-    if "repeat_alarm" in cfg:
-        cfg["repeat_stop_sound"] = bool(cfg.get("repeat_alarm"))
 
 
 
@@ -181,6 +185,8 @@ def set_cue_repeat(cue_key, val_str):
         return
     cleaned = val_str.strip().lower()
     config = get_config()
+    if "repeat_alarm" in config:
+        del config["repeat_alarm"]
     target_key = f"repeat_{cue_key}"
     if cleaned in ("off", "false", "no", "0", "disable", "disabled", "single"):
         config[target_key] = False
@@ -192,6 +198,7 @@ def set_cue_repeat(cue_key, val_str):
         print(f"\033[1;32m✓ Repeat loop for [{label}] enabled (loops until dismissed).\033[0m\n")
     else:
         print(f"\033[1;31mError: Invalid option for [{label}] repeat. Use 'on' or 'off'.\033[0m\n")
+
 
 def set_alarm_repeat(val_str):
     set_cue_repeat("stop_sound", val_str)
