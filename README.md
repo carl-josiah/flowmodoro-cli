@@ -1,6 +1,6 @@
 # ⚡ Flowmodoro CLI & Deep Work Tracker
 
-> A minimalist, terminal-based focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), with dual JSONL/Markdown persistence, continuous audio alarms, and an interactive analytics dashboard.
+> A minimalist, terminal-based focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring persistent directory configuration, dual JSONL/Markdown sync, continuous alarm loops, and interactive terminal analytics.
 
 ---
 
@@ -11,9 +11,10 @@
 - [Requirements](#-requirements)
 - [Quick Start](#-quick-start)
 - [CLI Reference](#-cli-reference)
-- [Data Storage & Markdown Sync](#-data-storage--markdown-sync)
+- [Persistent Storage & Path Configuration](#-persistent-storage--path-configuration)
+- [Markdown Sync & Analytics](#-markdown-sync--analytics)
 - [6-Hour Deep Work Protocol](#-6-hour-deep-work-protocol)
-- [Architecture & Platform Support](#-architecture--platform-support)
+- [Cross-Platform Audio Architecture](#-cross-platform-audio-architecture)
 
 ---
 
@@ -34,10 +35,10 @@ Standard Pomodoro locks you into arbitrary 25-minute intervals, often forcing br
 
 ## ✨ Key Features
 
+- **Persistent Folder Configuration:** Set your custom storage folder once (e.g., an Obsidian vault); the CLI remembers it forever across sessions and system restarts until changed.
 - **Dynamic Stopwatch:** Zero countdown pressure during focus; measure true deep work blocks.
 - **Continuous Alarm Cue:** Sounds a repeating audio alert at the end of breaks until manually dismissed with `[Enter]`.
 - **Zero External Dependencies:** Runs on standard Python 3 libraries (`ctypes`, `subprocess`, `threading`, `json`, `argparse`).
-- **Cross-Platform Audio:** Clean fallback support across macOS, Linux, Windows, and WSL.
 - **Dual-Layer Persistence:**
   - `flowmodoro_data.jsonl`: Machine-readable, append-only raw data.
   - `flowmodoro_log.md`: Human-readable summary table and journal compatible with Obsidian and VS Code.
@@ -54,15 +55,13 @@ Standard Pomodoro locks you into arbitrary 25-minute intervals, often forcing br
 
 ## 🚀 Quick Start
 
-1. **Clone or Download the script:**
+1. **Start a Deep Work Session:**
    ```bash
-   # Save flowmodoro.py to your project directory
    python flowmodoro.py
    ```
-
-2. **Start a Deep Work Session:**
-   - When prompted, enter your current focus objective (e.g., `Compiler Design`, `Math Proofs`, `Paper Draft`).
-   - Focus uninterrupted.
+2. **Set a Task & Focus:**
+   - Enter your focus task/topic (e.g., `Distributed Systems`, `Math Proofs`, `Paper Draft`).
+   - Work uninterrupted.
    - When your flow breaks or you need a pause, press **`Ctrl + C`**.
    - Your earned rest is calculated automatically. Press **`Y`** to begin the rest countdown.
 
@@ -70,13 +69,53 @@ Standard Pomodoro locks you into arbitrary 25-minute intervals, often forcing br
 
 ## 💻 CLI Reference
 
-| Command | Description |
-| :--- | :--- |
-| `python flowmodoro.py` | Start an interactive focus session |
-| `python flowmodoro.py -t "Task Name"` | Start directly with a pre-set task name |
-| `python flowmodoro.py --stats` (or `-s`) | View the analytics dashboard & 7-day progress |
-| `python flowmodoro.py --undo` (or `-u`) | Quickly delete the most recent session |
-| `python flowmodoro.py --delete` (or `-d`) | Open interactive menu to pick and delete sessions |
+| Command | Short | Description |
+| :--- | :--- | :--- |
+| `python flowmodoro.py` | | Start an interactive focus session |
+| `python flowmodoro.py --task "Task Name"` | `-t` | Start directly with a pre-set task name |
+| `python flowmodoro.py --path "/target/folder"` | `-p` | **Permanently** set the storage directory for data and Markdown logs |
+| `python flowmodoro.py --where` | `-w` | Inspect the currently active storage path and file locations |
+| `python flowmodoro.py --stats` | `-s` | View the analytics dashboard & 7-day progress |
+| `python flowmodoro.py --undo` | `-u` | Quickly delete the most recent session |
+| `python flowmodoro.py --delete` | `-d` | Open interactive menu to pick and delete specific sessions |
+
+---
+
+## 📂 Persistent Storage & Path Configuration
+
+Flowmodoro stores your preferred storage directory in a lightweight `flowmodoro_config.json` file beside the script.
+
+### Setting Your Path Permanently
+
+Run the `--path` command **once**:
+
+```bash
+# Windows (Obsidian Vault Example)
+python flowmodoro.py --path "C:\Users\YourName\Documents\ObsidianVault"
+
+# macOS / Linux
+python flowmodoro.py --path "~/Documents/ObsidianVault"
+```
+
+*Output:*
+```text
+✓ Successfully set persistent log path to:
+  📂 /Users/YourName/Documents/ObsidianVault
+  All future sessions and markdown logs will save here until changed.
+```
+
+### Checking Your Active Path
+
+```bash
+python flowmodoro.py --where
+```
+
+*Output:*
+```text
+📂 Active Storage Directory: /Users/YourName/Documents/ObsidianVault
+📄 Markdown Journal       : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
+💾 JSONL Data Store       : /Users/YourName/Documents/ObsidianVault/flowmodoro_data.jsonl
+```
 
 ---
 
@@ -108,22 +147,17 @@ Run `python flowmodoro.py --stats` anytime to inspect your focus velocity:
   • Total Sessions  : 28
   • Lifetime Focus  : 38h 06m 25s
   • Current Streak  : 7 day(s)
-  • Markdown Vault  : flowmodoro_log.md
+  • Active Directory: /Users/YourName/Documents/ObsidianVault
+  • Markdown Vault  : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
 ============================================================
 ```
 
 ---
 
-## 📝 Data Storage & Markdown Sync
+## 📝 Markdown Output Format (`flowmodoro_log.md`)
 
-Every completed or deleted session automatically updates both local files:
+Every completed or removed session updates the generated Markdown journal automatically:
 
-### 1. `flowmodoro_data.jsonl` (Source of Truth)
-```json
-{"date": "2026-08-21", "start_time": "06:00:15", "end_time": "07:15:40", "focus_seconds": 4525.0, "break_seconds": 905.0, "task": "Advanced Algorithms"}
-```
-
-### 2. `flowmodoro_log.md` (Obsidian / Notes Journal)
 ```markdown
 # ⚡ Flowmodoro Deep Work Journal
 
@@ -152,21 +186,21 @@ Every completed or deleted session automatically updates both local files:
 
 ## 🏛️ The 6:00 AM – 12:00 PM Deep Work Protocol
 
-To sustainably execute 6 daily hours of deep work without cognitive collapse:
+To execute 6 daily hours of deep work sustainably:
 
-1. **6:00 AM – 8:30 AM (Peak Analytical Block):** Tackle the hardest problem or primary theoretical bottleneck. Zero communication, notifications, or tab-switching.
-2. **8:30 AM – 8:50 AM (Physical Reset):** Hydrate, walk outside, stretch. Strictly no social media or reading feeds.
+1. **6:00 AM – 8:30 AM (Peak Analytical Block):** Tackle the primary theoretical bottleneck. Zero communication, notifications, or tab-switching.
+2. **8:30 AM – 8:50 AM (Physical Reset):** Hydrate, walk outside, stretch. Strictly no feeds or screens.
 3. **8:50 AM – 10:30 AM (Deep Execution Block):** Problem sets, coding, or rigorous writing.
-4. **10:30 AM – 10:50 AM (Rest / Nutrition):** Light fuel, screen-free recovery.
-5. **10:50 AM – 12:00 PM (Review & Synthesis):** Anki/spaced repetition, notes integration, and organizing tomorrow's priorities.
+4. **10:30 AM – 10:50 AM (Rest / Fuel):** Screen-free rest and recovery.
+5. **10:50 AM – 12:00 PM (Review & Synthesis):** Spaced repetition, notes integration, and organizing tomorrow's priorities.
 
 ---
 
-## 🛠️ Architecture & Platform Audio Handling
+## 🛠️ Cross-Platform Audio Architecture
 
 | Platform | Audio Mechanism | Behavior |
 | :--- | :--- | :--- |
-| **Windows** | `ctypes.windll.kernel32.Beep` / PowerShell | Direct hardware tone ($1000\text{ Hz}, 350\text{ ms}$) |
-| **macOS** | `afplay /System/Library/Sounds/Glass.aiff` | Native macOS audio playback |
-| **Linux** | `paplay` / `aplay` | PulseAudio / ALSA sound player |
-| **WSL** | Routed to `powershell.exe` | Seamless alert pass-through to host OS |
+| **Windows** | `ctypes.windll.kernel32.Beep` / PowerShell | Direct hardware tone ($1000\text{ Hz}, 350\text{ ms}$) [cite: 4] |
+| **macOS** | `afplay /System/Library/Sounds/Glass.aiff` | Native macOS audio playback [cite: 4] |
+| **Linux** | `paplay` / `aplay` | PulseAudio / ALSA sound player [cite: 4] |
+| **WSL** | Routed to `powershell.exe` | Seamless alert pass-through to host OS [cite: 4] |
