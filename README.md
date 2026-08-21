@@ -16,7 +16,9 @@
 - [Data Export (CSV & JSON)](#-data-export-csv--json)
 - [Audio & Alarm System](#-audio--alarm-system)
 - [Persistent Storage & Markdown Sync](#-persistent-storage--markdown-sync)
+- [Session Management & Pruning](#-session-management--pruning)
 - [Project Architecture](#-project-architecture)
+
 
 ---
 
@@ -207,7 +209,56 @@ flowmodoro --export ~/Documents/focus_history.json
 
 ---
 
+## 🔔 Audio & Alarm System
+
+Customize audio cues for break starts and break completion alarms:
+
+```bash
+# Open interactive sound browser to preview & select OS native sounds
+flowmodoro --sounds
+
+# Set custom audio files (.mp3, .wav, .m4a)
+flowmodoro --sound-start ~/Music/break_chime.wav
+flowmodoro --sound-stop ~/Music/alarm_chime.mp3
+
+# Reset all audio alerts back to OS system defaults
+flowmodoro --sound-default
+```
+
+---
+
+## 📂 Persistent Storage & Markdown Sync
+
+Every session is automatically logged to two formats:
+1. **`flowmodoro_data.jsonl`**: Raw JSON Lines data store for analytics and exports.
+2. **`flowmodoro_log.md`**: Beautifully formatted Markdown journal with summary metrics and table logs (perfect for Obsidian, Logseq, or PKM vaults).
+
+```bash
+# View active storage paths, audio settings, and goal settings
+flowmodoro --where
+
+# Change persistent log directory (e.g. point to an Obsidian vault)
+flowmodoro --path ~/Documents/ObsidianVault/Flowmodoro
+```
+
+---
+
+## 🗑️ Session Management & Pruning
+
+Accidentally recorded a session or need to remove an outlier?
+
+```bash
+# Undo / remove the most recent session
+flowmodoro --undo
+
+# Interactively browse and select specific sessions to delete
+flowmodoro --delete
+```
+
+---
+
 ## 🏗️ Project Architecture
+
 
 ```text
 flowmodoro-cli/

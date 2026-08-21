@@ -60,6 +60,37 @@ class FormattedParser(argparse.ArgumentParser):
 \033[1;36m======================================================================\033[0m
 """
 
+    def parse_args(self, args=None, namespace=None):
+        raw_args = sys.argv[1:] if args is None else list(args)
+        known_long_options = {
+            "delete": ("--delete", "-d"),
+            "stats": ("--stats", "-s"),
+            "goal": ("--goal", "-g"),
+            "path": ("--path", "-p"),
+            "export": ("--export", "-e"),
+            "sounds": ("--sounds", None),
+            "sound-start": ("--sound-start", None),
+            "sound-stop": ("--sound-stop", None),
+            "sound-default": ("--sound-default", None),
+            "max-break": ("--max-break", None),
+            "where": ("--where", "-w"),
+            "task": ("--task", "-t"),
+            "undo": ("--undo", "-u"),
+            "help": ("--help", "-h"),
+        }
+        for a in raw_args:
+            if a.startswith("-") and not a.startswith("--") and len(a) > 2:
+                name = a[1:].split("=")[0]
+                if name in known_long_options:
+                    long_opt, short_opt = known_long_options[name]
+                    hint = f"Did you mean '{long_opt}'" + (f" or '{short_opt}'?" if short_opt else "?")
+                    self.error(f"unrecognized option '{a}'. {hint}")
+                else:
+                    self.error(f"unrecognized option '{a}'.")
+
+        return super().parse_args(args=args, namespace=namespace)
+
+
 def main():
     parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker")
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
