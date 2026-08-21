@@ -8,8 +8,13 @@ version = "1.0.0"
 description = "A minimalist CLI focus tracker for deep work using the Flowmodoro technique."
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "Unlicense"}
+license = "Unlicense"
 authors = [{name = "Your Name"}]
 
 [project.scripts]
 flowmodoro = "flowmodoro.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["flowmodoro*"]
+
