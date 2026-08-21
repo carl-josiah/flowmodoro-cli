@@ -177,6 +177,39 @@ def delete_last_session():
     except (KeyboardInterrupt, EOFError):
         print("\nOperation canceled.\n")
 
+def parse_mass_selection(input_str, sessions):
+    if not input_str or not isinstance(input_str, str):
+        return set()
+    cleaned = input_str.strip().lower()
+    total = len(sessions)
+    if cleaned in ("all", "all sessions", "*"):
+        return set(range(total))
+
+    selected_indices = set()
+    tokens = [t.strip() for t in cleaned.split(",") if t.strip()]
+    for token in tokens:
+        if "-" in token:
+            parts = token.split("-")
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                start_num = int(parts[0])
+                end_num = int(parts[1])
+                for num in range(min(start_num, end_num), max(start_num, end_num) + 1):
+                    if 1 <= num <= total:
+                        selected_indices.add(num - 1)
+        elif token.isdigit():
+            num = int(token)
+            if 1 <= num <= total:
+                selected_indices.add(num - 1)
+        else:
+            for idx, s in enumerate(sessions):
+                t_val = str(s.get("task", "")).lower()
+                d_val = str(s.get("date", "")).lower()
+                if token in t_val or token in d_val:
+                    selected_indices.add(idx)
+
+    return selected_indices
+
+
 def interactive_delete_session():
     _, _, md_file = get_active_paths()
     sessions = load_all_sessions()
@@ -198,23 +231,75 @@ def interactive_delete_session():
         f_val = format_short_time(s.get('focus_seconds', 0))
         print(f"  {i+1:<3} | {d_val} | {st_val} - {et_val:<8} | {t_val:<20} | {f_val}")
     print("=" * 65)
+    print("\033[2mMass selection examples: '1, 3, 5' | '1-5' | '1-3, 7' | 'all' | 'taskname'\033[0m")
     try:
-        choice = input(f"\nEnter session number to delete (1-{len(sessions)}) or 'q' to cancel: ").strip().lower()
+        choice = input(f"\nEnter session #(s), range, task name, or 'all' (or 'q' to cancel): ").strip().lower()
         if choice not in ('q', ''):
-            if choice.isdigit():
-                idx = int(choice) - 1
-                if 0 <= idx < len(sessions):
-                    confirm = input(f"Delete session #{idx+1}? [y/N]: ").strip().lower()
-                    if confirm == 'y':
-                        sessions.pop(idx)
-                        overwrite_all_sessions(sessions)
-                        print(f"\033[1;32m✓ Deleted session #{idx+1} and resynced {md_file}\033[0m\n")
-                else:
-                    print("\033[1;31mError: Session number out of range.\033[0m\n")
-            else:
-                print("\033[1;31mError: Please enter a valid numerical session number.\033[0m\n")
+            to_delete = parse_mass_selection(choice, sessions)
+            if not to_delete:
+                print("\033[1;31mNo matching sessions found to delete.\033[0m\n")
+                return
+
+            sorted_indices = sorted(list(to_delete))
+            print(f"\n\033[1;33mSelected {len(sorted_indices)} session(s) to delete:\033[0m")
+            for idx in sorted_indices[:10]:
+                s = sessions[idx]
+                print(f"  • #{idx+1}: [{s.get('date')} {s.get('start_time')}] '{s.get('task')}' ({format_short_time(s.get('focus_seconds'))})")
+            if len(sorted_indices) > 10:
+                print(f"  ... and {len(sorted_indices) - 10} more session(s).")
+
+            confirm = input(f"\nAre you sure you want to mass delete these {len(sorted_indices)} session(s)? [y/N]: ").strip().lower()
+            if confirm == 'y':
+                remaining = [s for idx, s in enumerate(sessions) if idx not in to_delete]
+                overwrite_all_sessions(remaining)
+                print(f"\033[1;32m✓ Mass deleted {len(to_delete)} session(s) and resynced {md_file}\033[0m\n")
     except (KeyboardInterrupt, EOFError):
         print("\nOperation canceled.\n")
+
+def delete_by_task(task_query):
+    if not task_query or not isinstance(task_query, str):
+        print("\033[1;31mError: Please specify a task name query to delete (e.g. flowmodoro --delete-task 'test').\033[0m\n")
+        return
+    sessions = load_all_sessions()
+    if not sessions:
+        print("\033[1;31mNo sessions available to delete.\033[0m\n")
+        return
+    query = task_query.strip().lower()
+    matching = [idx for idx, s in enumerate(sessions) if query in str(s.get("task", "")).lower()]
+    if not matching:
+        print(f"\033[1;31mNo sessions matching '{task_query}' were found.\033[0m\n")
+        return
+    print(f"\033[1;33mFound {len(matching)} session(s) matching task '{task_query}':\033[0m")
+    for idx in matching[:10]:
+        s = sessions[idx]
+        print(f"  • #{idx+1}: [{s.get('date')} {s.get('start_time')}] '{s.get('task')}' ({format_short_time(s.get('focus_seconds'))})")
+    if len(matching) > 10:
+        print(f"  ... and {len(matching) - 10} more session(s).")
+    try:
+        confirm = input(f"\nAre you sure you want to mass delete all {len(matching)} session(s)? [y/N]: ").strip().lower()
+        if confirm == 'y':
+            remaining = [s for idx, s in enumerate(sessions) if idx not in matching]
+            overwrite_all_sessions(remaining)
+            print(f"\033[1;32m✓ Mass deleted {len(matching)} session(s) matching '{task_query}'.\033[0m\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nOperation canceled.\n")
+
+def delete_all_sessions():
+    sessions = load_all_sessions()
+    if not sessions:
+        print("\033[1;31mNo session history to clear.\033[0m\n")
+        return
+    print(f"\033[1;31mWARNING: This will permanently delete ALL {len(sessions)} recorded focus session(s)!\033[0m")
+    try:
+        confirm = input("Type 'DELETE ALL' to confirm: ").strip()
+        if confirm == "DELETE ALL":
+            overwrite_all_sessions([])
+            print(f"\033[1;32m✓ All session history has been cleared.\033[0m\n")
+        else:
+            print("Operation canceled.\n")
+    except (KeyboardInterrupt, EOFError):
+        print("\nOperation canceled.\n")
+
 
 def export_to_excel(dest_path, sessions):
 

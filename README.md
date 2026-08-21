@@ -195,15 +195,22 @@ flowmodoro --where
 flowmodoro --path ~/Documents/ObsidianVault/Flowmodoro
 ```
 
-### 🗑️ Session Pruning & History
+### 🗑️ Session Management & Mass Deletion
 
 ```bash
-# Undo / remove the most recent session
+# 1. Interactive mass deletion (select single '#', comma lists '1,3,5', ranges '1-5', 'all', or task names)
+flowmodoro --delete
+
+# 2. Mass delete all sessions matching a specific task or topic
+flowmodoro --delete-task "test"
+
+# 3. Undo / remove only the most recent session
 flowmodoro --undo
 
-# Interactively browse and delete specific logs
-flowmodoro --delete
+# 4. Permanently purge all recorded session logs (with safety confirmation)
+flowmodoro --clear-all
 ```
+
 
 ### 💾 Data Export & Excel Visualization
 

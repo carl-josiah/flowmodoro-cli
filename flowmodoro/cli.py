@@ -16,6 +16,8 @@ from .storage import (
     save_session,
     delete_last_session,
     interactive_delete_session,
+    delete_by_task,
+    delete_all_sessions,
     export_data,
     format_time,
     format_short_time
@@ -45,7 +47,7 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
   flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
   flowmodoro -w, --where         Show current storage paths, audio settings & goal
-  flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
+  flowmodoro -e, --export <FILE> Export session logs to CSV, JSON, or XLSX format
 
 \033[1;33mAUDIO CONFIGURATION:\033[0m
   flowmodoro --sounds            Interactive browser to preview & select OS native sounds
@@ -59,7 +61,9 @@ class FormattedParser(argparse.ArgumentParser):
 
 \033[1;33mSESSION PRUNING & HISTORY:\033[0m
   flowmodoro -u, --undo          Remove the most recently recorded session
-  flowmodoro -d, --delete        Interactively browse and delete specific logs
+  flowmodoro -d, --delete        Interactive mass deletion (range '1-5', list '1,3', 'all', or task)
+  flowmodoro --delete-task <T>   Mass delete all sessions matching task name <T>
+  flowmodoro --clear-all         Permanently purge all recorded session logs
 
 \033[1;33mHELP:\033[0m
   flowmodoro -h, --help          Show this command reference
@@ -70,6 +74,9 @@ class FormattedParser(argparse.ArgumentParser):
         raw_args = sys.argv[1:] if args is None else list(args)
         known_long_options = {
             "delete": ("--delete", "-d"),
+            "delete-task": ("--delete-task", None),
+            "delete-all": ("--delete-all", None),
+            "clear-all": ("--clear-all", None),
             "stats": ("--stats", "-s"),
             "goal": ("--goal", "-g"),
             "path": ("--path", "-p"),
@@ -109,7 +116,7 @@ def main():
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
     parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
-    parser.add_argument("--export", "-e", type=str, help="Export logs to CSV or JSON")
+    parser.add_argument("--export", "-e", type=str, help="Export logs to CSV, JSON, or XLSX")
     parser.add_argument("--sound-focus", type=str, help="Set custom focus session start chime")
     parser.add_argument("--sound-start", type=str, help="Set custom break start sound")
     parser.add_argument("--sound-stop", type=str, help="Set custom break complete alarm")
@@ -126,6 +133,8 @@ def main():
     parser.add_argument("--task", "-t", type=str, help="Session task name or filter tag")
     parser.add_argument("--undo", "-u", action="store_true", help="Undo last session")
     parser.add_argument("--delete", "-d", action="store_true", help="Interactive deletion")
+    parser.add_argument("--delete-task", type=str, help="Mass delete sessions matching task name")
+    parser.add_argument("--clear-all", "--delete-all", action="store_true", help="Clear all session history")
     args = parser.parse_args()
 
     if args.goal:
@@ -191,10 +200,14 @@ def main():
         print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m{a_rep}\n")
         return
 
-
-
     if args.stats:
         display_dashboard(filter_task=args.task)
+        return
+    if args.delete_task:
+        delete_by_task(args.delete_task)
+        return
+    if args.clear_all:
+        delete_all_sessions()
         return
     if args.undo:
         delete_last_session()
@@ -202,6 +215,7 @@ def main():
     if args.delete:
         interactive_delete_session()
         return
+
 
     task = args.task or "Deep Work"
     if not args.task:
