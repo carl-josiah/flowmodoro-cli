@@ -216,8 +216,162 @@ def interactive_delete_session():
     except (KeyboardInterrupt, EOFError):
         print("\nOperation canceled.\n")
 
+def export_to_excel(dest_path, sessions):
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment
+        from openpyxl.chart import DoughnutChart, BarChart, LineChart, Reference
+    except ImportError:
+        print("\033[1;31mError: openpyxl module is required for .xlsx export. Run 'pip install openpyxl' first.\033[0m\n")
+        return
+
+    try:
+        wb = openpyxl.Workbook()
+
+        # Sheet 1: Session Logs
+        ws_logs = wb.active
+        ws_logs.title = "Session Logs"
+        ws_logs.views.sheetView[0].showGridLines = True
+
+        headers = ["Date", "Task / Topic", "Start Time", "End Time", "Focus (Sec)", "Focus (Min)", "Focus (Hours)", "Break (Sec)", "Break (Min)"]
+        ws_logs.append(headers)
+
+        header_fill = PatternFill(start_color="1F4E78", end_color="1F4E78", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+
+        for col_idx in range(1, len(headers) + 1):
+            cell = ws_logs.cell(row=1, column=col_idx)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = Alignment(horizontal="center", vertical="center")
+
+        for s in sessions:
+            f_sec = s.get("focus_seconds", 0.0)
+            b_sec = s.get("break_seconds", 0.0)
+            ws_logs.append([
+                s.get("date", ""),
+                s.get("task", "Deep Work"),
+                s.get("start_time", ""),
+                s.get("end_time", ""),
+                round(f_sec, 2),
+                round(f_sec / 60.0, 2),
+                round(f_sec / 3600.0, 2),
+                round(b_sec, 2),
+                round(b_sec / 60.0, 2)
+            ])
+
+        for col in ws_logs.columns:
+            max_l = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws_logs.column_dimensions[col_letter].width = max(max_l + 4, 12)
+
+        # Sheet 2: Visual Dashboard
+        ws_dash = wb.create_sheet(title="Visual Dashboard")
+        ws_dash.views.sheetView[0].showGridLines = True
+
+        by_task = {}
+        by_date = {}
+        for s in sessions:
+            t = s.get("task", "Deep Work")
+            d = s.get("date", "")
+            f_hrs = s.get("focus_seconds", 0.0) / 3600.0
+            b_mins = s.get("break_seconds", 0.0) / 60.0
+            by_task[t] = by_task.get(t, 0.0) + f_hrs
+            if d not in by_date:
+                by_date[d] = {"focus_hrs": 0.0, "break_mins": 0.0}
+            by_date[d]["focus_hrs"] += f_hrs
+            by_date[d]["break_mins"] += b_mins
+
+        # Task Table
+        ws_dash.cell(row=1, column=1, value="Task / Topic").font = Font(bold=True)
+        ws_dash.cell(row=1, column=2, value="Focus Hours").font = Font(bold=True)
+        row_idx = 2
+        for t_name, t_hrs in sorted(by_task.items(), key=lambda x: x[1], reverse=True):
+            ws_dash.cell(row=row_idx, column=1, value=t_name)
+            ws_dash.cell(row=row_idx, column=2, value=round(t_hrs, 2))
+            row_idx += 1
+        task_end_row = row_idx - 1
+
+        # Date Table
+        ws_dash.cell(row=1, column=4, value="Date").font = Font(bold=True)
+        ws_dash.cell(row=1, column=5, value="Focus Hours").font = Font(bold=True)
+        ws_dash.cell(row=1, column=6, value="Break Mins").font = Font(bold=True)
+        row_d_idx = 2
+        for d_val, d_data in sorted(by_date.items()):
+            ws_dash.cell(row=row_d_idx, column=4, value=d_val)
+            ws_dash.cell(row=row_d_idx, column=5, value=round(d_data["focus_hrs"], 2))
+            ws_dash.cell(row=row_d_idx, column=6, value=round(d_data["break_mins"], 2))
+            row_d_idx += 1
+        date_end_row = row_d_idx - 1
+
+        # Chart 1: Donut Chart
+        if task_end_row >= 2:
+            chart1 = DoughnutChart()
+            chart1.title = "1. Deep Work Share by Task"
+            chart1.style = 10
+            chart1.width = 14
+            chart1.height = 10
+            labels1 = Reference(ws_dash, min_col=1, min_row=2, max_row=task_end_row)
+            data1 = Reference(ws_dash, min_col=2, min_row=1, max_row=task_end_row)
+            chart1.add_data(data1, titles_from_data=True)
+            chart1.set_categories(labels1)
+            ws_dash.add_chart(chart1, "H2")
+
+        # Chart 2: Clustered Bar Chart
+        if date_end_row >= 2:
+            chart2 = BarChart()
+            chart2.type = "col"
+            chart2.style = 11
+            chart2.title = "2. Daily Focus Hours Progress"
+            chart2.y_axis.title = "Hours"
+            chart2.x_axis.title = "Date"
+            chart2.width = 16
+            chart2.height = 10
+            labels2 = Reference(ws_dash, min_col=4, min_row=2, max_row=date_end_row)
+            data2 = Reference(ws_dash, min_col=5, min_row=1, max_row=date_end_row)
+            chart2.add_data(data2, titles_from_data=True)
+            chart2.set_categories(labels2)
+            ws_dash.add_chart(chart2, "H18")
+
+        # Chart 3: Line Chart
+        if len(sessions) >= 1:
+            chart3 = LineChart()
+            chart3.title = "3. Session Flow Endurance Trend"
+            chart3.style = 13
+            chart3.y_axis.title = "Focus Minutes"
+            chart3.x_axis.title = "Session #"
+            chart3.width = 16
+            chart3.height = 10
+            data3 = Reference(ws_logs, min_col=6, min_row=1, max_row=len(sessions) + 1)
+            chart3.add_data(data3, titles_from_data=True)
+            ws_dash.add_chart(chart3, "R2")
+
+        # Chart 4: Stacked Bar Chart
+        if date_end_row >= 2:
+            chart4 = BarChart()
+            chart4.type = "col"
+            chart4.grouping = "stacked"
+            chart4.overlap = 100
+            chart4.title = "4. Focus vs. Earned Rest (Minutes)"
+            chart4.y_axis.title = "Minutes"
+            chart4.x_axis.title = "Date"
+            chart4.width = 16
+            chart4.height = 10
+            labels4 = Reference(ws_dash, min_col=4, min_row=2, max_row=date_end_row)
+            data4 = Reference(ws_dash, min_col=5, min_row=1, max_col=6, max_row=date_end_row)
+            chart4.add_data(data4, titles_from_data=True)
+            chart4.set_categories(labels4)
+            ws_dash.add_chart(chart4, "R18")
+
+        wb.save(dest_path)
+        print(f"\033[1;32m✓ Exported {len(sessions)} session(s) with 4 pre-built Excel charts to:\033[0m\n  📂 {dest_path}\n")
+    except Exception as e:
+        print(f"\033[1;31mExcel export failed: {e}\033[0m\n")
+
+
 def export_data(destination_file):
-    """Exports session logs to CSV or JSON format."""
+    """Exports session logs to CSV, JSON, or XLSX format."""
     if not destination_file or not isinstance(destination_file, str) or "\0" in destination_file:
         print("\033[1;31mExport failed: Invalid destination path specified.\033[0m\n")
         return
@@ -244,9 +398,12 @@ def export_data(destination_file):
 
         ext = os.path.splitext(dest_path)[1].lower()
 
-        if ext == ".json":
+        if ext == ".xlsx":
+            export_to_excel(dest_path, sessions)
+        elif ext == ".json":
             with open(dest_path, "w", encoding="utf-8") as f:
                 json.dump(sessions, f, indent=2)
+            print(f"\033[1;32m✓ Exported {len(sessions)} session(s) successfully to:\033[0m\n  📂 {dest_path}\n")
         else:  # Default to CSV
             if not ext.endswith(".csv"):
                 dest_path += ".csv"
@@ -268,8 +425,9 @@ def export_data(destination_file):
                         "break_seconds": round(b_sec, 2),
                         "break_minutes": round(b_sec / 60.0, 2)
                     })
-        print(f"\033[1;32m✓ Exported {len(sessions)} session(s) successfully to:\033[0m\n  📂 {dest_path}\n")
+            print(f"\033[1;32m✓ Exported {len(sessions)} session(s) successfully to:\033[0m\n  📂 {dest_path}\n")
 
     except Exception as e:
         print(f"\033[1;31mExport failed: {e}\033[0m\n")
+
 

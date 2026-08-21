@@ -201,15 +201,19 @@ flowmodoro --delete
 
 ### 💾 Data Export & Excel Visualization
 
-For deep analysis in Excel, Google Sheets, or Apple Numbers:
+Flowmodoro can generate **native Microsoft Excel workbooks (`.xlsx`) pre-loaded with interactive charts**:
 
 ```bash
-# Export all focus session history to CSV
+# 1. Export native Excel workbook with 4 pre-built charts (.xlsx)
+flowmodoro --export ~/Desktop/focus_dashboard.xlsx
+
+# 2. Export raw CSV data table (.csv)
 flowmodoro --export ~/Desktop/focus_history.csv
 
-# Export to JSON format for scripts or custom integrations
+# 3. Export JSON format for custom scripts (.json)
 flowmodoro --export ~/Desktop/focus_history.json
 ```
+
 
 #### Recommended Excel Charts & Setup:
 
