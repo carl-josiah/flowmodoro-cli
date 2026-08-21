@@ -29,8 +29,10 @@ def get_config():
     else:
         cfg["target_dir"] = target_dir.strip()
 
+    cfg.setdefault("focus_sound", None)
     cfg.setdefault("start_sound", None)
     cfg.setdefault("stop_sound", None)
+
 
     goal = cfg.get("daily_goal_hours")
     if not isinstance(goal, (int, float)) or not math.isfinite(goal) or goal <= 0:
@@ -147,10 +149,12 @@ def set_custom_sound(sound_type, file_path):
 
 def reset_sound_defaults():
     config = get_config()
+    config["focus_sound"] = None
     config["start_sound"] = None
     config["stop_sound"] = None
     save_config(config)
     print("\033[1;32m✓ Audio alerts reset to system default chimes.\033[0m\n")
+
 
 def get_active_paths():
     config = get_config()

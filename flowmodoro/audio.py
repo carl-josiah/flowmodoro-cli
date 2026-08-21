@@ -78,20 +78,29 @@ def interactive_system_sound_picker():
     print("=" * 60)
 
     print("\nWhich alert do you want to configure?")
-    print("  [1] Focus Complete (Break Start tone)")
-    print("  [2] Earned Break Ended (Alarm tone)")
+    print("  [1] Focus Session Start (Focus chime)")
+    print("  [2] Focus Complete (Break Start tone)")
+    print("  [3] Earned Break Ended (Alarm tone)")
     try:
-        target_choice = input("Select [1 or 2, or 'q' to quit]: ").strip().lower()
+        target_choice = input("Select [1, 2, or 3, or 'q' to quit]: ").strip().lower()
     except (KeyboardInterrupt, EOFError):
         print("\nCanceled.\n")
         return
 
-    if target_choice not in ['1', '2']:
+    if target_choice not in ['1', '2', '3']:
         print("Canceled.\n")
         return
     
-    target_key = "start_sound" if target_choice == '1' else "stop_sound"
-    target_label = "Break Start" if target_choice == '1' else "Break End Alarm"
+    if target_choice == '1':
+        target_key = "focus_sound"
+        target_label = "Focus Start"
+    elif target_choice == '2':
+        target_key = "start_sound"
+        target_label = "Break Start"
+    else:
+        target_key = "stop_sound"
+        target_label = "Break End Alarm"
+
 
     while True:
         try:

@@ -218,11 +218,13 @@ Customize audio cues for break starts and break completion alarms:
 flowmodoro --sounds
 
 # Set custom audio files (.mp3, .wav, .m4a)
+flowmodoro --sound-focus ~/Music/focus_start.wav
 flowmodoro --sound-start ~/Music/break_chime.wav
 flowmodoro --sound-stop ~/Music/alarm_chime.mp3
 
 # Reset all audio alerts back to OS system defaults
 flowmodoro --sound-default
+
 ```
 
 ---

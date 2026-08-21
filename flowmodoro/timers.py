@@ -17,7 +17,9 @@ def run_focus_session(task_name="Deep Work"):
     
     start_dt = datetime.now()
     start_time = time.time()
+    trigger_alert("focus_sound")
     try:
+
         while True:
             elapsed = max(0.0, time.time() - start_time)
             sys.stdout.write(f"\rFocus Time: \033[1;32m{format_short_time(elapsed)}\033[0m")

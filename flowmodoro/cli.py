@@ -47,9 +47,11 @@ class FormattedParser(argparse.ArgumentParser):
 
 \033[1;33mAUDIO CONFIGURATION:\033[0m
   flowmodoro --sounds            Interactive browser to preview & select OS native sounds
+  flowmodoro --sound-focus <F>   Set custom audio for starting a focus session
   flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
   flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
   flowmodoro --sound-default     Reset all sound cues back to OS system defaults
+
 
 \033[1;33mSESSION PRUNING & HISTORY:\033[0m
   flowmodoro -u, --undo          Remove the most recently recorded session
@@ -69,6 +71,7 @@ class FormattedParser(argparse.ArgumentParser):
             "path": ("--path", "-p"),
             "export": ("--export", "-e"),
             "sounds": ("--sounds", None),
+            "sound-focus": ("--sound-focus", None),
             "sound-start": ("--sound-start", None),
             "sound-stop": ("--sound-stop", None),
             "sound-default": ("--sound-default", None),
@@ -97,6 +100,7 @@ def main():
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
     parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
     parser.add_argument("--export", "-e", type=str, help="Export logs to CSV or JSON")
+    parser.add_argument("--sound-focus", type=str, help="Set custom focus session start chime")
     parser.add_argument("--sound-start", type=str, help="Set custom break start sound")
     parser.add_argument("--sound-stop", type=str, help="Set custom break complete alarm")
     parser.add_argument("--sound-default", action="store_true", help="Reset sounds to default")
@@ -123,6 +127,9 @@ def main():
     if args.sounds:
         interactive_system_sound_picker()
         return
+    if args.sound_focus:
+        set_custom_sound("focus_sound", args.sound_focus)
+        return
     if args.sound_start:
         set_custom_sound("start_sound", args.sound_start)
         return
@@ -141,9 +148,11 @@ def main():
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
         print(f"💾 JSONL Data Store       : \033[0;32m{data_file}\033[0m")
+        print(f"🎵 Focus Start Audio      : \033[0;33m{cfg.get('focus_sound') or 'System Default'}\033[0m")
         print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m")
         print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m\n")
         return
+
     if args.stats:
         display_dashboard(filter_task=args.task)
         return
