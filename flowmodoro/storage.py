@@ -1,5 +1,6 @@
 import os
 import json
+import csv
 from datetime import datetime, date
 from .config import get_active_paths
 
@@ -117,3 +118,36 @@ def interactive_delete_session():
                 sessions.pop(idx)
                 overwrite_all_sessions(sessions)
                 print(f"\033[1;32m✓ Deleted session #{idx+1} and resynced {md_file}\033[0m\n")
+
+def export_data(destination_file):
+    """Exports session logs to CSV or JSON format."""
+    sessions = load_all_sessions()
+    if not sessions:
+        print("\n\033[1;31mNo session logs found to export.\033[0m\n")
+        return
+
+    dest_path = os.path.abspath(os.path.expanduser(destination_file.strip()))
+    ext = os.path.splitext(dest_path)[1].lower()
+
+    try:
+        if ext == ".json":
+            with open(dest_path, "w", encoding="utf-8") as f:
+                json.dump(sessions, f, indent=2)
+        else:  # Default to CSV
+            if not ext.endswith(".csv"):
+                dest_path += ".csv"
+            with open(dest_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["date", "task", "start_time", "end_time", "focus_seconds", "break_seconds"])
+                writer.writeheader()
+                for s in sessions:
+                    writer.writerow({
+                        "date": s.get("date"),
+                        "task": s.get("task", "Deep Work"),
+                        "start_time": s.get("start_time"),
+                        "end_time": s.get("end_time"),
+                        "focus_seconds": s.get("focus_seconds"),
+                        "break_seconds": s.get("break_seconds")
+                    })
+        print(f"\033[1;32m✓ Exported {len(sessions)} session(s) successfully to:\033[0m\n  📂 {dest_path}\n")
+    except Exception as e:
+        print(f"\033[1;31mExport failed: {e}\033[0m\n")

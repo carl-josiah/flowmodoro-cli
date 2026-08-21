@@ -3,10 +3,63 @@ import sys
 import subprocess
 import platform
 import threading
+import urllib.request
+import urllib.parse
 from .config import get_config, set_custom_sound
 
+# --- Desktop Banner Notifications ---
+def send_desktop_notification(title, message):
+    """Zero-dependency desktop notification for macOS, Linux, and Windows."""
+    system = platform.system()
+    try:
+        if system == "Darwin":  # macOS
+            script = f'display notification "{message}" with title "{title}" sound name "Glass"'
+            subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif system == "Linux":
+            if os.system("which notify-send > /dev/null 2>&1") == 0:
+                subprocess.Popen(["notify-send", title, message], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif system == "Windows":
+            ps_cmd = (
+                '[void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); '
+                '$notify = New-Object System.Windows.Forms.NotifyIcon; '
+                '$notify.Icon = [System.Drawing.SystemIcons]::Information; '
+                '$notify.Visible = $true; '
+                f'$notify.ShowBalloonTip(5000, "{title}", "{message}", [System.Windows.Forms.ToolTipIcon]::Info);'
+            )
+            subprocess.Popen(["powershell", "-c", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
+# --- Phone Push Notifications (ntfy.sh integration) ---
+def send_phone_notification(title, message, priority="default", tags="alarm_clock"):
+    """Sends zero-auth mobile push notifications via ntfy.sh."""
+    config = get_config()
+    topic = config.get("ntfy_topic")
+    if not topic:
+        return
+
+    def _send():
+        try:
+            url = f"https://ntfy.sh/{urllib.parse.quote(topic)}"
+            req = urllib.request.Request(
+                url,
+                data=message.encode("utf-8"),
+                headers={
+                    "Title": title,
+                    "Priority": priority,
+                    "Tags": tags,
+                    "User-Agent": "Flowmodoro-CLI/1.0"
+                },
+                method="POST"
+            )
+            urllib.request.urlopen(req, timeout=4)
+        except Exception:
+            pass
+
+    threading.Thread(target=_send, daemon=True).start()
+
+# --- System Sound Discovery & Browser ---
 def get_system_sound_dir():
-    """Returns the native OS sound directory and file extension."""
     system = platform.system()
     if system == "Darwin":
         return "/System/Library/Sounds", [".aiff", ".caf"]
@@ -17,7 +70,6 @@ def get_system_sound_dir():
     return None, []
 
 def list_system_sounds():
-    """Finds all available native sound files on the host machine."""
     sound_dir, valid_exts = get_system_sound_dir()
     if not sound_dir or not os.path.exists(sound_dir):
         return []
@@ -33,10 +85,9 @@ def list_system_sounds():
     return sounds
 
 def interactive_system_sound_picker():
-    """Interactive CLI menu to preview and select built-in OS sounds."""
     sounds = list_system_sounds()
     if not sounds:
-        print("\n\033[1;31mNo system sounds found on this operating system.\033[0m\n")
+        print("\n\033[1;31mNo native system sounds found on this OS.\033[0m\n")
         return
 
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -48,7 +99,6 @@ def interactive_system_sound_picker():
         print(f"  [{i+1:<2}] {snd['name']}")
     print("=" * 60)
 
-    # 1. Choose sound type to configure
     print("\nWhich alert do you want to configure?")
     print("  [1] Focus Complete (Break Start tone)")
     print("  [2] Earned Break Ended (Alarm tone)")
@@ -60,7 +110,6 @@ def interactive_system_sound_picker():
     target_key = "start_sound" if target_choice == '1' else "stop_sound"
     target_label = "Break Start" if target_choice == '1' else "Break End Alarm"
 
-    # 2. Preview and select
     while True:
         choice = input(f"\nEnter sound # to preview & select for [{target_label}] (or 'q' to exit): ").strip().lower()
         if choice == 'q' or not choice:
@@ -69,7 +118,6 @@ def interactive_system_sound_picker():
         
         if choice.isdigit() and 1 <= int(choice) <= len(sounds):
             selected = sounds[int(choice) - 1]
-            # Play a live preview
             play_sound_file(selected["path"])
             print(f"🔊 Playing preview: \033[1;36m{selected['name']}\033[0m")
             
@@ -117,11 +165,9 @@ def play_default_beep():
         elif system == "Darwin":
             subprocess.Popen(["afplay", "/System/Library/Sounds/Glass.aiff"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif system == "Linux":
-            played = False
             for cmd in [["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"], ["aplay", "/usr/share/sounds/alsa/Front_Center.wav"]]:
                 if os.system(f"which {cmd[0]} > /dev/null 2>&1") == 0:
                     subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    played = True
                     break
     except Exception:
         pass
@@ -136,6 +182,11 @@ def trigger_alert(sound_type="stop_sound"):
 
 def ring_alarm_until_dismissed():
     stop_event = threading.Event()
+    
+    # Trigger notifications simultaneously
+    send_desktop_notification("⚡ Flowmodoro", "Break is complete! Time to resume your deep work session.")
+    send_phone_notification("⚡ Flowmodoro Break Ended", "Your earned recovery is complete. Ready for flow state?", priority="high", tags="zap,rotating_light")
+
     def _alarm_loop():
         while not stop_event.is_set():
             trigger_alert("stop_sound")

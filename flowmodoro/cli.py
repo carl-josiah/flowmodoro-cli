@@ -3,47 +3,59 @@ import sys
 from .config import (
     BREAK_RATIO,
     set_persistent_directory,
+    set_daily_goal,
+    set_max_break,
+    set_notify_topic,
     set_custom_sound,
     reset_sound_defaults,
     get_active_paths,
-    get_config,
+    get_config
 )
 from .storage import (
     save_session,
     delete_last_session,
     interactive_delete_session,
+    export_data,
     format_time,
-    format_short_time,
+    format_short_time
 )
 from .dashboard import display_dashboard
 from .timers import run_focus_session, run_break_session
-
+from .audio import interactive_system_sound_picker, send_phone_notification
 
 class FormattedParser(argparse.ArgumentParser):
-    """Custom parser providing clean terminal formatting for --help."""
-
     def format_help(self):
         return """\
-\033[1;36m============================================================\033[0m
-\033[1;37m             ⚡ FLOWMODORO CLI HELP & COMMANDS ⚡\033[0m
-\033[1;36m============================================================\033[0m
+\033[1;36m======================================================================\033[0m
+\033[1;37m                 ⚡ FLOWMODORO CLI HELP & COMMANDS ⚡\033[0m
+\033[1;36m======================================================================\033[0m
 
 \033[1;33mUSAGE:\033[0m
   flowmodoro [OPTIONS]
 
 \033[1;33mCORE COMMANDS:\033[0m
   flowmodoro                     Start an interactive focus & flow session
-  flowmodoro -t, --task <NAME>   Start directly with a designated task name
-  flowmodoro -s, --stats         Display the 7-day deep work analytics dashboard
+  flowmodoro -t, --task <NAME>   Start session directly with designated task name
+  flowmodoro -s, --stats         Display analytics dashboard & 28-day heatmap
+  flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
 
-\033[1;33mPATH & STORAGE CONFIGURATION:\033[0m
-  flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & data storage
-  flowmodoro -w, --where         Show current storage paths and audio settings
+\033[1;33mGOALS, LIMITS & STORAGE:\033[0m
+  flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 6h)
+  flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
+  flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
+  flowmodoro -w, --where         Show current storage paths, audio settings & goal
+  flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
 
-\033[1;33mCUSTOM AUDIO ALARMS:\033[0m
-  flowmodoro --sound-start <FILE>  Set custom audio for break start (.mp3, .m4a, .wav)
-  flowmodoro --sound-stop <FILE>   Set custom audio for break completion alarm
-  flowmodoro --sound-default       Reset all sound cues back to OS system defaults
+\033[1;33mPHONE NOTIFICATIONS (ntfy.sh):\033[0m
+  flowmodoro --notify <TOPIC>    Subscribe to instant mobile break alerts
+  flowmodoro --notify-test       Send a test push notification to your phone
+  flowmodoro --notify-off        Disable mobile push notifications
+
+\033[1;33mAUDIO CONFIGURATION:\033[0m
+  flowmodoro --sounds            Interactive browser to preview & select OS native sounds
+  flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
+  flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
+  flowmodoro --sound-default     Reset all sound cues back to OS system defaults
 
 \033[1;33mSESSION PRUNING & HISTORY:\033[0m
   flowmodoro -u, --undo          Remove the most recently recorded session
@@ -51,31 +63,58 @@ class FormattedParser(argparse.ArgumentParser):
 
 \033[1;33mHELP:\033[0m
   flowmodoro -h, --help          Show this command reference
-\033[1;36m============================================================\033[0m
+\033[1;36m======================================================================\033[0m
 """
-
 
 def main():
     parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker")
-    parser.add_argument("--path", "-p", type=str)
-    parser.add_argument("--sound-start", type=str)
-    parser.add_argument("--sound-stop", type=str)
-    parser.add_argument("--sound-default", action="store_true")
-    parser.add_argument("--where", "-w", action="store_true")
-    parser.add_argument("--stats", "-s", action="store_true")
-    parser.add_argument("--task", "-t", type=str, default="Deep Work")
-    parser.add_argument("--undo", "-u", action="store_true")
-    parser.add_argument("--delete", "-d", action="store_true")
-    parser.add_argument(
-        "--sounds",
-        action="store_true",
-        help="Browse, preview, and select native system sounds",
-    )
-
+    parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
+    parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
+    parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
+    parser.add_argument("--export", "-e", type=str, help="Export logs to CSV or JSON")
+    parser.add_argument("--notify", type=str, help="Set mobile ntfy.sh notification topic")
+    parser.add_argument("--notify-test", action="store_true", help="Send a test notification to phone")
+    parser.add_argument("--notify-off", action="store_true", help="Disable mobile notifications")
+    parser.add_argument("--sound-start", type=str, help="Set custom break start sound")
+    parser.add_argument("--sound-stop", type=str, help="Set custom break complete alarm")
+    parser.add_argument("--sound-default", action="store_true", help="Reset sounds to default")
+    parser.add_argument("--sounds", action="store_true", help="Browse native system sounds")
+    parser.add_argument("--where", "-w", action="store_true", help="Show active config")
+    parser.add_argument("--stats", "-s", action="store_true", help="Show stats dashboard")
+    parser.add_argument("--task", "-t", type=str, help="Session task name or filter tag")
+    parser.add_argument("--undo", "-u", action="store_true", help="Undo last session")
+    parser.add_argument("--delete", "-d", action="store_true", help="Interactive deletion")
     args = parser.parse_args()
 
+    if args.goal:
+        set_daily_goal(args.goal)
+        return
+    if args.max_break is not None:
+        set_max_break(args.max_break)
+        return
+    if args.notify:
+        set_notify_topic(args.notify)
+        return
+    if args.notify_off:
+        set_notify_topic("off")
+        return
+    if args.notify_test:
+        cfg = get_config()
+        topic = cfg.get("ntfy_topic")
+        if not topic:
+            print("\n\033[1;31mNo notification topic configured. Run 'flowmodoro --notify <my-topic>' first.\033[0m\n")
+        else:
+            send_phone_notification("⚡ Flowmodoro Test", f"Test alert sent to topic '{topic}'! Your setup is working.", priority="high", tags="test_tube,tada")
+            print(f"\n\033[1;32m✓ Test notification dispatched to ntfy topic: '{topic}'\033[0m\n")
+        return
     if args.path:
         set_persistent_directory(args.path)
+        return
+    if args.export:
+        export_data(args.export)
+        return
+    if args.sounds:
+        interactive_system_sound_picker()
         return
     if args.sound_start:
         set_custom_sound("start_sound", args.sound_start)
@@ -89,18 +128,19 @@ def main():
     if args.where:
         target_dir, data_file, md_file = get_active_paths()
         cfg = get_config()
+        max_b = f"{cfg.get('max_break_minutes'):g} min" if cfg.get("max_break_minutes") else "Disabled (Uncapped)"
+        topic = f"ntfy.sh/{cfg.get('ntfy_topic')}" if cfg.get("ntfy_topic") else "Disabled"
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
+        print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 6.0):g} hours/day\033[0m")
+        print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
+        print(f"📱 Phone Push Alerts      : \033[0;33m{topic}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
         print(f"💾 JSONL Data Store       : \033[0;32m{data_file}\033[0m")
-        print(
-            f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m"
-        )
-        print(
-            f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m\n"
-        )
+        print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m")
+        print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m\n")
         return
     if args.stats:
-        display_dashboard()
+        display_dashboard(filter_task=args.task)
         return
     if args.undo:
         delete_last_session()
@@ -108,15 +148,9 @@ def main():
     if args.delete:
         interactive_delete_session()
         return
-    from .audio import interactive_system_sound_picker
 
-    if args.sounds:
-        interactive_system_sound_picker()
-        return
-
-    # Start session
-    task = args.task
-    if task == "Deep Work":
+    task = args.task or "Deep Work"
+    if not args.task:
         prompt = input("Enter focus task/topic (Press Enter for 'Deep Work'): ").strip()
         if prompt:
             task = prompt
@@ -135,12 +169,11 @@ def main():
         print(f"\033[0;32m✓ Saved to {md_file}\033[0m")
 
         choice = input("\nStart earned break now? [Y/n/q]: ").strip().lower()
-        if choice == "q":
+        if choice == 'q':
             print("Session ended. Great work today!")
             break
-        elif choice != "n":
+        elif choice != 'n':
             run_break_session(earned_break)
-
 
 if __name__ == "__main__":
     main()

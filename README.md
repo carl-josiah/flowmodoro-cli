@@ -1,6 +1,6 @@
 # ⚡ Flowmodoro CLI & Deep Work Tracker
 
-> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring global command-line access, interactive native system sound selection, persistent Obsidian/Markdown sync, continuous alarms, and terminal analytics.
+> A minimalist, terminal-native focus tracker designed for **uninterrupted deep work**. Built around the **Flowmodoro technique** (earned recovery based on actual flow duration), featuring mobile push notifications to your phone, desktop banners, 28-day activity heatmaps, CSV/JSON exports, and customizable daily goals.
 
 ---
 
@@ -11,17 +11,19 @@
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [CLI Command Reference](#-cli-command-reference)
+- [Phone Notifications Setup](#-phone-notifications-setup)
+- [Daily Focus Goals & Break Limits](#-daily-focus-goals--break-limits)
+- [Analytics & Activity Heatmap](#-analytics--activity-heatmap)
+- [Data Export (CSV & JSON)](#-data-export-csv--json)
 - [Audio & Alarm System](#-audio--alarm-system)
-- [Persistent Storage & Markdown Vault Sync](#-persistent-storage--markdown-vault-sync)
-- [Terminal Analytics Dashboard](#-terminal-analytics-dashboard)
-- [6-Hour Deep Work Protocol](#-6-hour-deep-work-protocol)
+- [Persistent Storage & Markdown Sync](#-persistent-storage--markdown-sync)
 - [Project Architecture](#-project-architecture)
 
 ---
 
 ## 🧠 What is Flowmodoro?
 
-Standard Pomodoro forces artificial 25-minute cutoffs that disrupt deep cognitive flow states. 
+Standard Pomodoro forces artificial 25-minute cutoffs that disrupt deep cognitive flow states.
 
 **Flowmodoro flips the equation:**
 1. **Count-Up Stopwatch:** Work without arbitrary timers until your focus naturally breaks.
@@ -36,32 +38,220 @@ Standard Pomodoro forces artificial 25-minute cutoffs that disrupt deep cognitiv
 
 ## ✨ Key Features
 
-- **Global CLI Command:** Run `flowmodoro` directly from any terminal directory.
-- **Native System Sound Browser (`--sounds`):** Discover, preview, and select built-in macOS, Windows, and Linux audio chimes.
-- **Custom Audio Support:** Use your own `.mp3`, `.m4a`, `.wav`, or `.aiff` files for focus-stop and break-complete alarms.
-- **Continuous Alarm Loop:** Plays your alarm repeatedly at the end of breaks until manually dismissed with `[Enter]`.
-- **Persistent Storage Configuration:** Set your custom storage folder once (e.g., an Obsidian vault); the CLI remembers it forever.
-- **Dual-Layer Persistence:**
-  - `flowmodoro_data.jsonl`: Machine-readable, append-only raw data.
-  - `flowmodoro_log.md`: Human-readable summary table and journal formatted for Obsidian and VS Code.
-- **Terminal Analytics Dashboard (`--stats`):** Visual ASCII progress bars tracking your daily 6-hour target, 7-day breakdown, and active streaks.
-- **Session Management:** Built-in `--undo` and interactive `--delete` tools to prune accidental runs.
-- **Zero External Dependencies:** Built entirely with Python 3 standard libraries.
+- **Instant Phone Alerts (iOS & Android):** Zero-signup mobile push notifications via open-source `ntfy.sh` alerting you the moment a break ends.
+- **Desktop Banner Notifications:** Native notifications via `osascript` (macOS), `notify-send` (Linux), and PowerShell (Windows).
+- **28-Day Consistency Heatmap:** Terminal GitHub-style contribution graph (`░ ▒ ▓ █`) tracking daily habit momentum.
+- **Task & Tag Analytics:** Filter focus metrics by specific subjects (`flowmodoro --stats -t "Math"`).
+- **Configurable Break Cap (`--max-break`):** Limit maximum rest to prevent long flow sessions from derailing momentum.
+- **CSV & JSON Data Export (`--export`):** One-click exports to import into Excel, Notion, or Google Sheets.
+- **Customizable Daily Goals (`--goal`):** Configurable target (e.g. 4h, 6h, 8h/day).
+- **Global Terminal Access:** Run `flowmodoro` from any directory.
+- **Zero External Dependencies:** Built purely with Python 3 standard libraries.
 
 ---
 
 ## 📦 Installation
 
-### macOS & Linux (Recommended via `pipx`)
-
-Install [pipx](https://pypa.github.io/pipx/) if not already installed, then install Flowmodoro in editable mode:
+### macOS & Linux (via `pipx`)
 
 ```bash
-# 1. Install pipx (if needed)
+# 1. Install pipx (if not installed)
 brew install pipx
 pipx ensurepath
 
-# 2. Clone and install locally
-git clone [https://github.com/yourusername/flowmodoro-cli.git](https://github.com/yourusername/flowmodoro-cli.git)
+# 2. Clone and install in editable mode
+git clone https://github.com/yourusername/flowmodoro-cli.git
 cd flowmodoro-cli
 pipx install --editable .
+```
+
+### Windows
+
+```powershell
+git clone https://github.com/yourusername/flowmodoro-cli.git
+cd flowmodoro-cli
+pip install -e .
+```
+
+---
+
+## 🚀 Quick Start
+
+1. **Start an interactive focus session:**
+   ```bash
+   flowmodoro
+   ```
+2. **Set a Task & Focus:**
+   - Enter your focus task/topic (e.g., `Distributed Systems`, `Linear Algebra`).
+   - Work uninterrupted. Press **`Ctrl + C`** when your flow breaks.
+   - Earned rest is calculated automatically. Press **`Y`** to begin the countdown.
+3. **Dismiss the Alarm:**
+   - When the break reaches `00:00`, the terminal chime rings, a desktop banner appears, and a push alert is sent to your phone.
+   - Press **`[Enter]`** to dismiss the alarm.
+
+---
+
+## 💻 CLI Command Reference
+
+```text
+======================================================================
+                 ⚡ FLOWMODORO CLI HELP & COMMANDS ⚡
+======================================================================
+
+USAGE:
+  flowmodoro [OPTIONS]
+
+CORE COMMANDS:
+  flowmodoro                     Start an interactive focus & flow session
+  flowmodoro -t, --task <NAME>   Start session directly with designated task name
+  flowmodoro -s, --stats         Display analytics dashboard & 28-day heatmap
+  flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
+
+GOALS, LIMITS & STORAGE:
+  flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 6h)
+  flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
+  flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
+  flowmodoro -w, --where         Show current storage paths, audio settings & goal
+  flowmodoro -e, --export <FILE> Export session logs to CSV or JSON format
+
+PHONE NOTIFICATIONS (ntfy.sh):
+  flowmodoro --notify <TOPIC>    Subscribe to instant mobile break alerts
+  flowmodoro --notify-test       Send a test push notification to your phone
+  flowmodoro --notify-off        Disable mobile push notifications
+
+AUDIO CONFIGURATION:
+  flowmodoro --sounds            Interactive browser to preview & select OS native sounds
+  flowmodoro --sound-start <F>   Set custom audio for break start (.mp3, .m4a, .wav)
+  flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
+  flowmodoro --sound-default     Reset all sound cues back to OS system defaults
+
+SESSION PRUNING & HISTORY:
+  flowmodoro -u, --undo          Remove the most recently recorded session
+  flowmodoro -d, --delete        Interactively browse and delete specific logs
+
+HELP:
+  flowmodoro -h, --help          Show this command reference
+======================================================================
+```
+
+---
+
+## 📱 Phone Notifications Setup
+
+You can receive push notifications on your phone when breaks start and finish using the free, open-source **[ntfy](https://ntfy.sh)** app (available on iOS & Android, zero signup required):
+
+1. **Install the `ntfy` app** on your phone from the App Store or Google Play.
+2. **Choose a unique topic name** (e.g., `flow-john-9281`) and tap **Subscribe** in the app.
+3. **Configure Flowmodoro with your topic (run once):**
+   ```bash
+   flowmodoro --notify flow-john-9281
+   ```
+4. **Send a test notification to verify:**
+   ```bash
+   flowmodoro --notify-test
+   ```
+   *Your phone will immediately receive a push notification!*
+
+---
+
+## 🎯 Daily Focus Goals & Break Limits
+
+```bash
+# Set daily target to 4 hours
+flowmodoro --goal 4
+
+# Cap breaks at 20 minutes max (prevents 40-minute breaks after 3h sessions)
+flowmodoro --max-break 20
+
+# Disable break capping (unlimited earned rest)
+flowmodoro --max-break 0
+```
+
+---
+
+## 📊 Analytics & Activity Heatmap
+
+```bash
+# General overview with 28-day heatmap & top topics
+flowmodoro --stats
+
+# Filter metrics for a specific topic only
+flowmodoro --stats -t "Algorithms"
+```
+
+```text
+==============================================================
+               ⚡ FLOWMODORO ANALYTICS DASHBOARD ⚡
+==============================================================
+
+📅 Today (2026-08-21):
+  • Focus Logged : 04h 15m 30s
+  • Daily Goal   : [██████████████░░░░░░] 71% (04:15:30 / 06:00:00)
+
+🗓️  28-Day Consistency Heatmap (Goal: 6h/day):
+  ░░▒▓  ▓██▒  █▓██  ████  (Today)
+  [· 0h  ░ <35%  ▒ <70%  ▓ <100%  █ Goal Met]
+
+📈 Last 7 Days Activity:
+  Date       | Focus Time  | Daily Target
+  -----------+-------------+-----------------------------
+  2026-08-15 | 05:45:10    | [████████████] 96%
+  2026-08-16 | 06:00:00    | [████████████] 100%
+  2026-08-17 | 04:30:00    | [█████████░░░] 75%
+  2026-08-18 | 06:15:00    | [████████████] 100%
+  2026-08-19 | 05:20:45    | [██████████░░] 89%
+  2026-08-20 | 06:00:00    | [████████████] 100%
+  2026-08-21 | 04:15:30    | [████████░░░░] 71% (Today)
+
+🏷️  Top Focus Objectives:
+  • Distributed Systems    : 18h 40m 10s  (49%)
+  • Math Proofs            : 12h 10m 00s  (32%)
+  • Paper Drafting         : 07h 16m 15s  (19%)
+
+🏆 Summary Highlights:
+  • Daily Target    : 6 hour(s)/day
+  • Total Focus     : 38h 06m 25s across 28 cycle(s)
+  • Current Streak  : 7 day(s)
+  • Active Vault    : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
+==============================================================
+```
+
+---
+
+## 💾 Data Export (CSV & JSON)
+
+Export your logs to analyze in Notion, Google Sheets, or Excel:
+
+```bash
+# Export to CSV
+flowmodoro --export ~/Documents/focus_history.csv
+
+# Export to JSON
+flowmodoro --export ~/Documents/focus_history.json
+```
+
+---
+
+## 🏗️ Project Architecture
+
+```text
+flowmodoro-cli/
+├── pyproject.toml              # Build metadata & entry-point definition
+├── LICENSE                     # The Unlicense (Public Domain)
+├── README.md                   # Complete documentation
+├── .gitignore                  # Ignores local data & build artifacts
+└── flowmodoro/
+    ├── __init__.py             # Package initializer
+    ├── cli.py                  # CLI argument parser & help menu
+    ├── config.py               # Persistent config (~/.flowmodoro_config.json)
+    ├── audio.py                # Sound player, desktop banners & mobile notifications
+    ├── storage.py              # JSONL storage, Markdown sync & CSV/JSON exports
+    ├── dashboard.py            # Heatmaps, task filters & ASCII progress charts
+    └── timers.py               # Stopwatch flow loop & capped break countdowns
+```
+
+---
+
+## 📄 License
+
+This is free and unencumbered software released into the public domain ([The Unlicense](LICENSE)).
