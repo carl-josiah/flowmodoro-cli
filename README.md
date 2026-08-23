@@ -76,7 +76,7 @@ Keep it simple. You don't need any complex setup or flags to start tracking:
    flowmodoro
    ```
 2. **Set a Task & Focus:**
-   - Enter your focus task/topic (or press Enter for `'Deep Work'`).
+   - Enter your focus task/topic (or press Enter for `'DEEP_WORK'`). Tasks are automatically formatted to uppercase with underscores (e.g. `DISTRIBUTED_SYSTEMS`).
    - Work uninterrupted. Press **`Ctrl + C`** when your flow breaks.
    - Earned rest is calculated automatically. Press **`Y`** to start the rest countdown.
 3. **Dismiss the Alarm:**
@@ -90,10 +90,10 @@ Keep it simple. You don't need any complex setup or flags to start tracking:
 For everyday minimalist usage, you only need these three core commands:
 
 ```bash
-# 1. Start a default focus session
+# 1. Start a default focus session (Default task: DEEP_WORK)
 flowmodoro
 
-# 2. Start a session directly with a specific task name
+# 2. Start a session directly with a specific task name (Auto-formatted to DISTRIBUTED_SYSTEMS)
 flowmodoro -t "Distributed Systems"
 
 # 3. View your 28-day consistency heatmap & daily summary
@@ -106,7 +106,7 @@ flowmodoro -s
 
 For power users who want custom audio files, vault integration, break capping, or history pruning:
 
-### 🎯 Daily Focus Goals & Break Limits
+### 🎯 Daily Focus Goals & Goal-Met Streaks
 
 ```bash
 # Set daily focus target to 4 hours (default: 6h)
@@ -118,6 +118,8 @@ flowmodoro --max-break 20
 # Disable break capping (unlimited earned rest)
 flowmodoro --max-break 0
 ```
+
+> **Note on Streaks:** Your streak count only increments on days where your total focus time meets or exceeds your daily target. If today's goal is still in progress, your current streak reflects your consecutive goal-met days up to yesterday.
 
 ### 📊 Analytics & Activity Heatmap
 
@@ -143,20 +145,20 @@ flowmodoro --stats -t "Algorithms"
   [· 0h  ░ <35%  ▒ <70%  ▓ <100%  █ Goal Met]
 
 📈 Last 7 Days Activity:
-  Date       | Focus Time  | Daily Target
-  -----------+-------------+-----------------------------
-  2026-08-15 | 05:45:10    | [████████████] 96%
-  2026-08-16 | 06:00:00    | [████████████] 100%
-  2026-08-17 | 04:30:00    | [█████████░░░] 75%
-  2026-08-18 | 06:15:00    | [████████████] 100%
-  2026-08-19 | 05:20:45    | [██████████░░] 89%
-  2026-08-20 | 06:00:00    | [████████████] 100%
-  2026-08-21 | 04:15:30    | [████████░░░░] 71% (Today)
+  Date       | Focus Time  | Daily Target            | Goal Status
+  -----------+-------------+-------------------------+------------
+  2026-08-15 | 05:45:10    | [███████████░] 96%      | Missed
+  2026-08-16 | 06:00:00    | [████████████] 100%     | ✓ Goal Met
+  2026-08-17 | 04:30:00    | [█████████░░░] 75%      | Missed
+  2026-08-18 | 06:15:00    | [████████████] 100%     | ✓ Goal Met
+  2026-08-19 | 06:20:45    | [████████████] 100%     | ✓ Goal Met
+  2026-08-20 | 06:00:00    | [████████████] 100%     | ✓ Goal Met
+  2026-08-21 | 04:15:30    | [████████░░░░] 71%      | In Progress
 
 🏆 Summary Highlights:
   • Daily Target    : 6 hour(s)/day
   • Total Focus     : 38h 06m 25s across 28 cycle(s)
-  • Current Streak  : 7 day(s)
+  • Current Streak  : 3 day(s) (Goal-Met Days)
   • Active Vault    : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
 ==============================================================
 ```

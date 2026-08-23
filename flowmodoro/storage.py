@@ -31,6 +31,12 @@ def format_short_time(seconds):
     hrs, mins = divmod(mins, 60)
     return f"{hrs:02d}:{mins:02d}:{secs:02d}" if hrs > 0 else f"{mins:02d}:{secs:02d}"
 
+def normalize_task_name(task_name):
+    if not task_name or not isinstance(task_name, str):
+        return "DEEP_WORK"
+    cleaned = "_".join(task_name.strip().split()).upper()
+    return cleaned if cleaned else "DEEP_WORK"
+
 def load_all_sessions():
     _, data_file, _ = get_active_paths()
     if not os.path.exists(data_file):
@@ -66,8 +72,7 @@ def load_all_sessions():
                             if not isinstance(record.get("end_time"), str):
                                 record["end_time"] = "00:00:00"
 
-                            if not isinstance(record.get("task"), str):
-                                record["task"] = "Deep Work"
+                            record["task"] = normalize_task_name(record.get("task"))
 
                             sessions.append(record)
                     except json.JSONDecodeError:
@@ -87,7 +92,7 @@ def overwrite_all_sessions(sessions):
     except Exception as e:
         print(f"\033[1;31mError saving session store: {e}\033[0m\n")
 
-def save_session(start_dt, end_dt, focus_seconds, break_seconds, task_name="Deep Work"):
+def save_session(start_dt, end_dt, focus_seconds, break_seconds, task_name="DEEP_WORK"):
     _, data_file, _ = get_active_paths()
     record = {
         "date": start_dt.strftime("%Y-%m-%d"),
@@ -95,7 +100,7 @@ def save_session(start_dt, end_dt, focus_seconds, break_seconds, task_name="Deep
         "end_time": end_dt.strftime("%H:%M:%S"),
         "focus_seconds": round(max(0.0, float(focus_seconds)), 2),
         "break_seconds": round(max(0.0, float(break_seconds)), 2),
-        "task": str(task_name) if task_name else "Deep Work"
+        "task": normalize_task_name(task_name)
     }
     try:
         with open(data_file, "a", encoding="utf-8") as f:

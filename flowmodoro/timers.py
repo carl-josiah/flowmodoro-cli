@@ -5,12 +5,12 @@ import math
 from datetime import datetime
 from .config import get_active_paths, get_config
 from .audio import trigger_alert, ring_alarm_until_dismissed
-from .storage import format_short_time, format_time
+from .storage import format_short_time, format_time, normalize_task_name
 
-def run_focus_session(task_name="Deep Work"):
+def run_focus_session(task_name="DEEP_WORK"):
     _, _, md_file = get_active_paths()
     os.system('cls' if os.name == 'nt' else 'clear')
-    safe_task = str(task_name) if task_name else "Deep Work"
+    safe_task = normalize_task_name(task_name)
     print("=== FLOWMODORO: FOCUS MODE ===")
     print(f"🎯 Objective: \033[1;36m{safe_task}\033[0m\n📂 Logging to: \033[0;36m{md_file}\033[0m")
     print("Tracking deep work. Press [Ctrl + C] when your flow breaks.\n")

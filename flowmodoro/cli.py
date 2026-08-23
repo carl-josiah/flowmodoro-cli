@@ -20,7 +20,8 @@ from .storage import (
     delete_all_sessions,
     export_data,
     format_time,
-    format_short_time
+    format_short_time,
+    normalize_task_name
 )
 from .dashboard import display_dashboard
 from .timers import run_focus_session, run_break_session
@@ -204,7 +205,7 @@ def main():
         display_dashboard(filter_task=args.task)
         return
     if args.delete_task:
-        delete_by_task(args.delete_task)
+        delete_by_task(normalize_task_name(args.delete_task))
         return
     if args.clear_all:
         delete_all_sessions()
@@ -217,12 +218,12 @@ def main():
         return
 
 
-    task = args.task or "Deep Work"
-    if not args.task:
+    if args.task:
+        task = normalize_task_name(args.task)
+    else:
         try:
-            prompt = input("Enter focus task/topic (Press Enter for 'Deep Work'): ").strip()
-            if prompt:
-                task = prompt
+            prompt = input("Enter focus task/topic (Press Enter for 'DEEP_WORK'): ").strip()
+            task = normalize_task_name(prompt) if prompt else "DEEP_WORK"
         except (KeyboardInterrupt, EOFError):
             print("\nSession canceled.")
             return

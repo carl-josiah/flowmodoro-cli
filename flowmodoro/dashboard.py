@@ -2,7 +2,7 @@ import os
 import math
 from datetime import date, timedelta, datetime
 from .config import get_active_paths, get_config
-from .storage import load_all_sessions, format_time, format_short_time
+from .storage import load_all_sessions, format_time, format_short_time, normalize_task_name
 
 def render_ascii_bar(progress, width=20):
     try:
@@ -60,8 +60,9 @@ def display_dashboard(filter_task=None):
         return
 
     if filter_task and isinstance(filter_task, str):
-        sessions = [s for s in all_sessions if filter_task.lower() in str(s.get("task", "")).lower()]
-        print(f"\n🎯 Filter Active: \033[1;36m'{filter_task}'\033[0m ({len(sessions)} matching sessions)")
+        clean_filter = normalize_task_name(filter_task)
+        sessions = [s for s in all_sessions if clean_filter in normalize_task_name(str(s.get("task", "")))]
+        print(f"\n🎯 Filter Active: \033[1;36m'{clean_filter}'\033[0m ({len(sessions)} matching sessions)")
     else:
         sessions = all_sessions
 
@@ -76,7 +77,7 @@ def display_dashboard(filter_task=None):
     
     for s in sessions:
         d = s.get("date", today_str)
-        t = str(s.get("task", "Deep Work"))
+        t = normalize_task_name(str(s.get("task", "DEEP_WORK")))
         f_sec = s.get("focus_seconds", 0.0)
         daily_totals[d] = daily_totals.get(d, 0.0) + f_sec
         task_totals[t] = task_totals.get(t, 0.0) + f_sec
@@ -94,13 +95,20 @@ def display_dashboard(filter_task=None):
     print("  \033[2m[· 0h  ░ <35%  ▒ <70%  ▓ <100%  █ Goal Met]\033[0m")
 
     print(f"\n📈 Last 7 Days Activity:")
-    print("  Date       | Focus Time  | Daily Target")
-    print("  -----------+-------------+-----------------------------")
+    print("  Date       | Focus Time  | Daily Target            | Goal Status")
+    print("  -----------+-------------+-------------------------+------------")
     for i in range(6, -1, -1):
-        d_str = (today_dt - timedelta(days=i)).strftime("%Y-%m-%d")
+        d_dt = today_dt - timedelta(days=i)
+        d_str = d_dt.strftime("%Y-%m-%d")
         sec = daily_totals.get(d_str, 0.0)
         mark = " (Today)" if d_str == today_str else ""
-        print(f"  {d_str} | {format_short_time(sec):<11} | {render_ascii_bar(sec / DAILY_GOAL_SECONDS, width=12)}{mark}")
+        if sec >= DAILY_GOAL_SECONDS:
+            status_badge = "\033[1;32m✓ Goal Met\033[0m"
+        elif d_str == today_str:
+            status_badge = "\033[0;33mIn Progress\033[0m"
+        else:
+            status_badge = "\033[2mMissed\033[0m"
+        print(f"  {d_str} | {format_short_time(sec):<11} | {render_ascii_bar(sec / DAILY_GOAL_SECONDS, width=12):<23}{mark:<8} | {status_badge}")
 
     if not filter_task and len(task_totals) > 1:
         print("\n🏷️  Top Focus Objectives:")
@@ -110,23 +118,24 @@ def display_dashboard(filter_task=None):
             safe_tname = str(t_name)[:22]
             print(f"  • {safe_tname:<22} : {format_time(t_sec):<12} ({pct:.0f}%)")
 
-    valid_dates = []
-    for d in daily_totals.keys():
-        try:
-            valid_dates.append(datetime.strptime(d, "%Y-%m-%d").date())
-        except (ValueError, TypeError):
-            pass
+    # Streak logic: calculate consecutive days where daily goal was met
+    goal_met_dates = set()
+    for d_str, sec in daily_totals.items():
+        if sec >= DAILY_GOAL_SECONDS:
+            try:
+                goal_met_dates.add(datetime.strptime(d_str, "%Y-%m-%d").date())
+            except (ValueError, TypeError):
+                pass
 
-    sorted_days = sorted(valid_dates)
     current_streak = 0
-    check_day = today_dt if today_dt in sorted_days else today_dt - timedelta(days=1)
-    while check_day in sorted_days:
+    check_day = today_dt if today_dt in goal_met_dates else (today_dt - timedelta(days=1))
+    while check_day in goal_met_dates:
         current_streak += 1
         check_day -= timedelta(days=1)
 
     print(f"\n🏆 Summary Highlights:")
     print(f"  • Daily Target    : {goal_hours:g} hour(s)/day")
     print(f"  • Total Focus     : {format_time(total_focus)} across {len(sessions)} cycle(s)")
-    print(f"  • Current Streak  : \033[1;33m{current_streak} day(s)\033[0m")
+    print(f"  • Current Streak  : \033[1;33m{current_streak} day(s)\033[0m (Goal-Met Days)")
     print(f"  • Active Vault    : \033[0;36m{md_file}\033[0m\n" + "=" * 62 + "\n")
 
