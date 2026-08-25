@@ -6,7 +6,8 @@
 [![License](https://img.shields.io/badge/license-Unlicense-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey.svg)](#-installation)
 [![Code Style](https://img.shields.io/badge/code%20style-PEP%208-brightgreen.svg)](#-software-engineering--architecture)
-[![Fuzz Tested](https://img.shields.io/badge/fuzzing-100%25%20passed-success.svg)](#-software-engineering--architecture)
+[![Fuzz Tested](https://img.shields.io/badge/fuzzing-passed-success.svg)](#-software-engineering--architecture)
+
 
 **A minimalist, terminal-native focus tracker built for uninterrupted cognitive flow.**  
 *Earned recovery based on actual deep work duration, with night owl day cutoffs, vault auto-sync, and zero-overlap audio controls.*
@@ -277,7 +278,8 @@ flowmodoro --export ~/Desktop/focus_history.json
 Built following clean software engineering principles:
 - **High Cohesion & Low Coupling:** Decoupled storage, configuration, audio process management, and timer loops.
 - **Process Tracking:** Thread-safe audio management (`stop_active_audio()`) prevents overlapping audio processes.
-- **100% Fuzz-Tested:** Stress-tested against malformed JSON, invalid inputs, NaN/Inf bounds, and file corruption.
+- **Extensively Fuzz-Tested:** Stress-tested against malformed JSON, boundary inputs, NaN/Inf floats, and file corruption.
+
 
 ```text
 flowmodoro-cli/

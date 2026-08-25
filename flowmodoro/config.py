@@ -10,7 +10,7 @@ DEFAULT_MAX_BREAK_MINS = None
 DEFAULT_DAY_CUTOFF_HOUR = 0
 USER_HOME = os.path.expanduser("~")
 CONFIG_FILE = os.path.join(USER_HOME, ".flowmodoro_config.json")
-DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Flowmodoro")
+DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Second Brain", "2 - Source Material", "Flowmodoro")
 
 def sanitize_path(path_str):
     if not isinstance(path_str, str):
@@ -57,7 +57,7 @@ def get_config():
     cfg.setdefault("repeat_stop_sound", True)
 
     goal = cfg.get("daily_goal_hours")
-    if not isinstance(goal, (int, float)) or not math.isfinite(goal) or goal <= 0:
+    if not isinstance(goal, (int, float)) or not math.isfinite(goal) or goal <= 0 or goal > 24:
         cfg["daily_goal_hours"] = DEFAULT_GOAL_HOURS
 
     max_b = cfg.get("max_break_minutes")
@@ -144,7 +144,7 @@ def set_daily_goal(hours_str):
     try:
         hours = float(hours_str)
         if not math.isfinite(hours) or hours <= 0:
-            print("\033[1;31mError: Daily goal must be a positive number greater than 0 hours (e.g. 6.0).\033[0m\n")
+            print("\033[1;31mError: Daily goal must be a positive number greater than 0 hours (e.g. 4.0).\033[0m\n")
             return
         if hours > 24:
             print("\033[1;31mError: Daily focus goal cannot exceed 24 hours per day.\033[0m\n")
@@ -156,6 +156,8 @@ def set_daily_goal(hours_str):
         print(f"\033[1;32m✓ Daily deep work goal set to: {hours:g} hours/day\033[0m\n")
     except ValueError:
         print("\033[1;31mError: Please enter a valid number of hours (e.g. 4, 6.5, 8).\033[0m\n")
+
+
 
 def set_max_break(minutes_str):
     if not minutes_str or not isinstance(minutes_str, str):
