@@ -259,7 +259,7 @@ def main():
         print(f"\033[0;32m✓ Saved to {md_file}\033[0m")
 
         try:
-            choice = input("\nStart earned break now? [Y/n/q]: ").strip().lower()
+            choice = input("\nStart earned break now? [Y/n/c/q]: ").strip().lower()
         except (KeyboardInterrupt, EOFError):
             print("\nSession ended. Great work today!")
             break
@@ -267,8 +267,19 @@ def main():
         if choice == 'q':
             print("Session ended. Great work today!")
             break
-        elif choice != 'n':
+        elif choice not in ['n', 'c']:
             run_break_session(earned_break)
+
+        try:
+            next_session = input(f"\nStart another focus session on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
+        if next_session in ['n', 'q']:
+            print("Session ended. Great work today!")
+            break
+
 
 if __name__ == "__main__":
     try:

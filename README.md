@@ -78,10 +78,13 @@ Keep it simple. You don't need any complex setup or flags to start tracking:
 2. **Set a Task & Focus:**
    - Enter your focus task/topic (or press Enter for `'DEEP_WORK'`). Tasks are automatically formatted to uppercase with underscores (e.g. `DISTRIBUTED_SYSTEMS`).
    - Work uninterrupted. Press **`Ctrl + C`** when your flow breaks.
-   - Earned rest is calculated automatically. Press **`Y`** to start the rest countdown.
-3. **Dismiss the Alarm:**
+   - Earned rest is calculated automatically.
+3. **Flexible Break & Session Prompt:**
+   - Prompt: `Start earned break now? [Y/n/c/q]` (Press `Y` to take break, `n` or `c` to cancel break, or `q` to quit).
+   - After break ends or is canceled, you are asked: `Start another focus session on '<TASK>'? [Y/n/q]`. A new focus timer is **never** started without your explicit confirmation!
+4. **Dismiss the Alarm:**
    - When break reaches `00:00`, a chime rings and a desktop notification appears.
-   - Press **`[Enter]`** to start your next session.
+   - Press **`[Enter]`** to dismiss the alarm. Audio processes are cleanly stopped to prevent overlapping sounds.
 
 ---
 
@@ -96,7 +99,7 @@ flowmodoro
 # 2. Start a session directly with a specific task name (Auto-formatted to DISTRIBUTED_SYSTEMS)
 flowmodoro -t "Distributed Systems"
 
-# 3. View your 28-day consistency heatmap & daily summary
+# 3. View your 28-day consistency heatmap, task breakdown & daily summary
 flowmodoro -s
 ```
 
@@ -124,7 +127,7 @@ flowmodoro --max-break 0
 ### 📊 Analytics & Activity Heatmap
 
 ```bash
-# General overview with 28-day heatmap & top topics
+# General overview with 28-day heatmap, task breakdown table & daily target progress
 flowmodoro --stats
 
 # Filter metrics for a specific topic only
@@ -155,9 +158,16 @@ flowmodoro --stats -t "Algorithms"
   2026-08-20 | 06:00:00    | [████████████] 100%     | ✓ Goal Met
   2026-08-21 | 04:15:30    | [████████░░░░] 71%      | In Progress
 
+🏷️  Task & Objective Breakdown:
+  Task Name              | Sessions | Total Time  | Share
+  -----------------------+----------+-------------+-------
+  DISTRIBUTED_SYSTEMS    | 12       | 24h 10m 00s |   63%
+  ALGORITHMS             | 8        | 09h 45m 15s |   26%
+  DEEP_WORK              | 4        | 04h 11m 10s |   11%
+
 🏆 Summary Highlights:
   • Daily Target    : 6 hour(s)/day
-  • Total Focus     : 38h 06m 25s across 28 cycle(s)
+  • Total Focus     : 38h 06m 25s across 24 cycle(s)
   • Current Streak  : 3 day(s) (Goal-Met Days)
   • Active Vault    : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
 ==============================================================

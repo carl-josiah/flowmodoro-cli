@@ -4,7 +4,7 @@ import time
 import math
 from datetime import datetime
 from .config import get_active_paths, get_config
-from .audio import trigger_alert, ring_alarm_until_dismissed
+from .audio import trigger_alert, ring_alarm_until_dismissed, stop_active_audio
 from .storage import format_short_time, format_time, normalize_task_name
 
 def run_focus_session(task_name="DEEP_WORK"):
@@ -37,7 +37,7 @@ def run_focus_session(task_name="DEEP_WORK"):
 def run_break_session(break_seconds):
     if not isinstance(break_seconds, (int, float)) or not math.isfinite(break_seconds) or break_seconds <= 0:
         print("No earned break time available.")
-        return
+        return True
 
     config = get_config()
     max_mins = config.get("max_break_minutes")
@@ -53,7 +53,7 @@ def run_break_session(break_seconds):
     os.system('cls' if os.name == 'nt' else 'clear')
     print("=== FLOWMODORO: EARNED REST ===")
     print(f"Break Duration: \033[1;34m{format_short_time(actual_break)}\033[0m{capped_note}")
-    print("Step away from the screen, hydrate, and relax. [Ctrl + C] to skip.\n")
+    print("Step away from the screen, hydrate, and relax. [Ctrl + C] to cancel break.\n")
 
     remaining = int(actual_break)
     try:
@@ -63,6 +63,10 @@ def run_break_session(break_seconds):
             time.sleep(1)
             remaining -= 1
         ring_alarm_until_dismissed()
+        return True
     except KeyboardInterrupt:
-        print("\n\nBreak skipped early.")
+        stop_active_audio()
+        print("\n\nBreak canceled early.")
+        return False
+
 

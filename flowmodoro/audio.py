@@ -136,6 +136,36 @@ def interactive_system_sound_picker():
         else:
             print("\033[1;31mInvalid number. Try again.\033[0m")
 
+_active_audio_process = None
+_audio_lock = threading.Lock()
+
+def stop_active_audio():
+    """Stops any currently playing audio subprocess to prevent audio overlap."""
+    global _active_audio_process
+    with _audio_lock:
+        if _active_audio_process is not None:
+            try:
+                _active_audio_process.terminate()
+                _active_audio_process.wait(timeout=0.2)
+            except Exception:
+                try:
+                    _active_audio_process.kill()
+                except Exception:
+                    pass
+            _active_audio_process = None
+
+def _start_audio_process(cmd):
+    """Helper to start audio process and record reference for process management."""
+    global _active_audio_process
+    stop_active_audio()
+    try:
+        proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with _audio_lock:
+            _active_audio_process = proc
+        return proc
+    except Exception:
+        return None
+
 def play_sound_file(file_path):
     if not file_path or not isinstance(file_path, str) or not os.path.isfile(file_path):
         return
@@ -143,7 +173,7 @@ def play_sound_file(file_path):
     system = platform.system()
     try:
         if system == "Darwin":
-            subprocess.Popen(["afplay", file_path], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _start_audio_process(["afplay", file_path])
         elif system == "Windows":
             safe_path = file_path.replace("'", "''")
             ps_cmd = (
@@ -152,12 +182,12 @@ def play_sound_file(file_path):
                 f"$player.Open([System.Uri]'{safe_path}'); "
                 f"$player.Play(); Start-Sleep -Milliseconds 1500"
             )
-            subprocess.Popen(["powershell", "-c", ps_cmd], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _start_audio_process(["powershell", "-c", ps_cmd])
         elif system == "Linux":
             for tool in ["mpv", "ffplay", "paplay", "aplay", "cvlc"]:
                 if os.system(f"which {tool} > /dev/null 2>&1") == 0:
                     cmd = ["ffplay", "-nodisp", "-autoexit", file_path] if tool == "ffplay" else [tool, file_path]
-                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    _start_audio_process(cmd)
                     return
     except Exception:
         pass
@@ -173,13 +203,13 @@ def play_default_beep():
             if windll:
                 windll.kernel32.Beep(1000, 350)
             else:
-                subprocess.Popen(["powershell", "-c", "[console]::beep(1000, 350)"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _start_audio_process(["powershell", "-c", "[console]::beep(1000, 350)"])
         elif system == "Darwin":
-            subprocess.Popen(["afplay", "/System/Library/Sounds/Glass.aiff"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            _start_audio_process(["afplay", "/System/Library/Sounds/Glass.aiff"])
         elif system == "Linux":
             for cmd in [["paplay", "/usr/share/sounds/freedesktop/stereo/complete.oga"], ["aplay", "/usr/share/sounds/alsa/Front_Center.wav"]]:
                 if os.system(f"which {cmd[0]} > /dev/null 2>&1") == 0:
-                    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    _start_audio_process(cmd)
                     break
     except Exception:
         pass
@@ -199,31 +229,35 @@ def ring_alarm_until_dismissed():
     # Trigger desktop banner
     send_desktop_notification("⚡ Flowmodoro", "Break is complete! Time to resume your deep work session.")
 
-    if repeat_enabled:
-        stop_event = threading.Event()
+    try:
+        if repeat_enabled:
+            stop_event = threading.Event()
 
-        def _alarm_loop():
-            while not stop_event.is_set():
-                trigger_alert("stop_sound")
-                stop_event.wait(1.8)
+            def _alarm_loop():
+                while not stop_event.is_set():
+                    trigger_alert("stop_sound")
+                    stop_event.wait(1.8)
 
-        alarm_thread = threading.Thread(target=_alarm_loop, daemon=True)
-        alarm_thread.start()
-        print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm and start next session... <<<\033[0m")
-        try:
-            input()
-        except (KeyboardInterrupt, EOFError):
-            pass
-        finally:
-            stop_event.set()
-            alarm_thread.join()
-    else:
-        trigger_alert("stop_sound")
-        print("\n\n\033[1;33m>>> Break complete! Press [Enter] to start next session... <<<\033[0m")
-        try:
-            input()
-        except (KeyboardInterrupt, EOFError):
-            pass
+            alarm_thread = threading.Thread(target=_alarm_loop, daemon=True)
+            alarm_thread.start()
+            print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm... <<<\033[0m")
+            try:
+                input()
+            except (KeyboardInterrupt, EOFError):
+                pass
+            finally:
+                stop_event.set()
+                alarm_thread.join(timeout=0.5)
+        else:
+            trigger_alert("stop_sound")
+            print("\n\n\033[1;33m>>> Break complete! Press [Enter] to dismiss alarm... <<<\033[0m")
+            try:
+                input()
+            except (KeyboardInterrupt, EOFError):
+                pass
+    finally:
+        stop_active_audio()
+
 
 
 
