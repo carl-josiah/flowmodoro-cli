@@ -2,9 +2,12 @@ import os
 import json
 import math
 
+from datetime import datetime, timedelta
+
 BREAK_RATIO = 0.2
-DEFAULT_GOAL_HOURS = 6.0
+DEFAULT_GOAL_HOURS = 4.0
 DEFAULT_MAX_BREAK_MINS = None
+DEFAULT_DAY_CUTOFF_HOUR = 0
 USER_HOME = os.path.expanduser("~")
 CONFIG_FILE = os.path.join(USER_HOME, ".flowmodoro_config.json")
 DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Flowmodoro")
@@ -39,7 +42,6 @@ def get_config():
     else:
         cfg["target_dir"] = sanitize_path(target_dir)
 
-
     cfg.setdefault("focus_sound", None)
     cfg.setdefault("start_sound", None)
     cfg.setdefault("stop_sound", None)
@@ -54,10 +56,6 @@ def get_config():
 
     cfg.setdefault("repeat_stop_sound", True)
 
-
-
-
-
     goal = cfg.get("daily_goal_hours")
     if not isinstance(goal, (int, float)) or not math.isfinite(goal) or goal <= 0:
         cfg["daily_goal_hours"] = DEFAULT_GOAL_HOURS
@@ -67,7 +65,46 @@ def get_config():
         if not isinstance(max_b, (int, float)) or not math.isfinite(max_b) or max_b <= 0:
             cfg["max_break_minutes"] = DEFAULT_MAX_BREAK_MINS
 
+    cutoff = cfg.get("day_cutoff_hour")
+    if not isinstance(cutoff, (int, float)) or not math.isfinite(cutoff) or not (0 <= cutoff < 24):
+        cfg["day_cutoff_hour"] = DEFAULT_DAY_CUTOFF_HOUR
+    else:
+        cfg["day_cutoff_hour"] = int(cutoff)
+
     return cfg
+
+def get_logical_date(dt=None):
+    """Returns logical work date taking into account user's configured day_cutoff_hour."""
+    if dt is None:
+        dt = datetime.now()
+    config = get_config()
+    cutoff = config.get("day_cutoff_hour", 0)
+    if isinstance(cutoff, (int, float)) and 0 < cutoff < 24:
+        if dt.hour < cutoff:
+            return (dt - timedelta(days=1)).date()
+    return dt.date()
+
+def set_day_cutoff(hour_str):
+    if not hour_str or not isinstance(hour_str, str):
+        print("\033[1;31mError: Please enter a valid cutoff hour (0-23, e.g. 3 for 3:00 AM).\033[0m\n")
+        return
+    try:
+        val = float(hour_str)
+        if not math.isfinite(val) or val < 0 or val >= 24:
+            print("\033[1;31mError: Cutoff hour must be between 0 (midnight) and 23 (e.g. 3 for 3:00 AM).\033[0m\n")
+            return
+        
+        int_val = int(val)
+        config = get_config()
+        config["day_cutoff_hour"] = int_val
+        save_config(config)
+        if int_val == 0:
+            print("\033[1;32m✓ Day cutoff reset to default (00:00 Midnight).\033[0m\n")
+        else:
+            print(f"\033[1;32m✓ Day cutoff set to: {int_val}:00 AM (sessions before {int_val}:00 AM count towards previous day)\033[0m\n")
+    except ValueError:
+        print("\033[1;31mError: Please enter a valid cutoff hour (e.g. 3 for 3:00 AM, 0 for midnight).\033[0m\n")
+
 
 def save_config(config_data):
     try:

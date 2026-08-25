@@ -1,7 +1,7 @@
 import os
 import math
 from datetime import date, timedelta, datetime
-from .config import get_active_paths, get_config
+from .config import get_active_paths, get_config, get_logical_date
 from .storage import load_all_sessions, format_time, format_short_time, normalize_task_name
 
 def render_ascii_bar(progress, width=20):
@@ -18,7 +18,7 @@ def render_ascii_bar(progress, width=20):
     return f"[{'█' * filled}{'░' * (width - filled)}] {int(p * 100)}%"
 
 def render_activity_heatmap(daily_totals, target_seconds):
-    today = date.today()
+    today = get_logical_date()
     output = []
     t_sec = float(target_seconds) if (isinstance(target_seconds, (int, float)) and math.isfinite(target_seconds) and target_seconds > 0) else 21600.0
 
@@ -43,9 +43,10 @@ def render_activity_heatmap(daily_totals, target_seconds):
 def display_dashboard(filter_task=None):
     target_dir, _, md_file = get_active_paths()
     config = get_config()
-    goal_hours = config.get("daily_goal_hours", 6.0)
+    goal_hours = config.get("daily_goal_hours", 4.0)
     if not isinstance(goal_hours, (int, float)) or not math.isfinite(goal_hours) or goal_hours <= 0:
-        goal_hours = 6.0
+        goal_hours = 4.0
+
 
     DAILY_GOAL_SECONDS = max(1.0, float(goal_hours) * 3600)
 
@@ -70,8 +71,9 @@ def display_dashboard(filter_task=None):
         print(f"\nNo sessions match the filter '{filter_task}'.\n")
         return
 
-    today_dt = date.today()
+    today_dt = get_logical_date()
     today_str = today_dt.strftime("%Y-%m-%d")
+
     daily_totals = {}
     task_totals = {}
     task_counts = {}

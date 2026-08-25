@@ -5,6 +5,7 @@ from .config import (
     set_persistent_directory,
     set_daily_goal,
     set_max_break,
+    set_day_cutoff,
     set_custom_sound,
     reset_sound_defaults,
     set_alarm_repeat,
@@ -44,8 +45,9 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
 
 \033[1;33mGOALS, LIMITS & STORAGE:\033[0m
-  flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 6h)
+  flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 4h)
   flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
+  flowmodoro --cutoff <HOUR>     Set day cutoff hour for night owls (e.g. 3 for 3 AM)
   flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
   flowmodoro -w, --where         Show current storage paths, audio settings & goal
   flowmodoro -e, --export <FILE> Export session logs to CSV, JSON, or XLSX format
@@ -80,6 +82,8 @@ class FormattedParser(argparse.ArgumentParser):
             "clear-all": ("--clear-all", None),
             "stats": ("--stats", "-s"),
             "goal": ("--goal", "-g"),
+            "cutoff": ("--cutoff", None),
+            "day-cutoff": ("--day-cutoff", None),
             "path": ("--path", "-p"),
             "export": ("--export", "-e"),
             "sounds": ("--sounds", None),
@@ -162,6 +166,7 @@ def main():
     parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker")
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
+    parser.add_argument("--cutoff", "--day-cutoff", type=str, help="Set day cutoff hour for night owls (e.g. 3 for 3 AM)")
     parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
     parser.add_argument("--export", "-e", type=str, help="Export logs to CSV, JSON, or XLSX")
     parser.add_argument("--sound-focus", type=str, help="Set custom focus session start chime")
@@ -189,6 +194,9 @@ def main():
         return
     if args.max_break is not None:
         set_max_break(args.max_break)
+        return
+    if args.cutoff is not None:
+        set_day_cutoff(args.cutoff)
         return
     if args.path:
         set_persistent_directory(args.path)
@@ -233,19 +241,24 @@ def main():
         target_dir, data_file, md_file = get_active_paths()
         cfg = get_config()
         max_b = f"{cfg.get('max_break_minutes'):g} min" if cfg.get("max_break_minutes") else "Disabled (Uncapped)"
+        cutoff_val = cfg.get("day_cutoff_hour", 0)
+        cutoff_str = f"{cutoff_val}:00 AM (Night Owl Mode)" if cutoff_val > 0 else "00:00 Midnight (Default)"
         f_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_focus_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         b_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_start_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         a_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_stop_sound", True) else " \033[0;33m[Single Chime]\033[0m"
 
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
-        print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 6.0):g} hours/day\033[0m")
+        print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 4.0):g} hours/day\033[0m")
+
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
+        print(f"🌙 Day Cutoff Hour        : \033[0;33m{cutoff_str}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
         print(f"💾 JSONL Data Store       : \033[0;32m{data_file}\033[0m")
         print(f"🎵 Focus Start Audio      : \033[0;33m{cfg.get('focus_sound') or 'System Default'}\033[0m{f_rep}")
         print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m{b_rep}")
         print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m{a_rep}\n")
         return
+
 
     if args.stats:
         display_dashboard(filter_task=args.task)

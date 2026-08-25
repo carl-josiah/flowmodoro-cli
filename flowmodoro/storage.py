@@ -3,7 +3,7 @@ import json
 import csv
 import math
 from datetime import datetime, date
-from .config import get_active_paths
+from .config import get_active_paths, get_logical_date
 
 def format_time(seconds):
     try:
@@ -94,14 +94,16 @@ def overwrite_all_sessions(sessions):
 
 def save_session(start_dt, end_dt, focus_seconds, break_seconds, task_name="DEEP_WORK"):
     _, data_file, _ = get_active_paths()
+    logical_date_str = get_logical_date(start_dt).strftime("%Y-%m-%d")
     record = {
-        "date": start_dt.strftime("%Y-%m-%d"),
+        "date": logical_date_str,
         "start_time": start_dt.strftime("%H:%M:%S"),
         "end_time": end_dt.strftime("%H:%M:%S"),
         "focus_seconds": round(max(0.0, float(focus_seconds)), 2),
         "break_seconds": round(max(0.0, float(break_seconds)), 2),
         "task": normalize_task_name(task_name)
     }
+
     try:
         with open(data_file, "a", encoding="utf-8") as f:
             f.write(json.dumps(record) + "\n")
