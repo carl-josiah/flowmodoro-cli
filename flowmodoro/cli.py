@@ -228,6 +228,51 @@ def main():
             print("\nSession canceled.")
             return
 
+def prompt_break_choice():
+    """Prompt for earned break action, rejecting any input other than Y, N, C, Q."""
+    while True:
+        try:
+            val = input("\nStart earned break now? [Y/n/c/q]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            elif val in ('c', 'cancel'):
+                return 'c'
+            elif val in ('q', 'quit', 'exit'):
+                return 'q'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), 'c' (cancel), or 'q' (quit).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def prompt_next_session_choice(task):
+    """Prompt before starting a new focus session, rejecting invalid inputs."""
+    while True:
+        try:
+            val = input(f"\nStart another focus session on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            elif val in ('q', 'quit', 'exit'):
+                return 'q'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), or 'q' (quit).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def prompt_short_session_retry():
+    """Prompt when focus duration is < 1s, rejecting invalid inputs."""
+    while True:
+        try:
+            val = input("Start another session? [Y/n]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes) or 'n' (no).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
     total_day_focus = 0
     _, _, md_file = get_active_paths()
     while True:
@@ -240,7 +285,7 @@ def main():
         if focus_seconds < 1.0:
             print("\nFocus session too short (< 1s), session not logged.")
             try:
-                retry = input("Start another session? [Y/n]: ").strip().lower()
+                retry = prompt_short_session_retry()
                 if retry == 'n':
                     print("Session ended. Great work today!")
                     break
@@ -259,26 +304,27 @@ def main():
         print(f"\033[0;32m✓ Saved to {md_file}\033[0m")
 
         try:
-            choice = input("\nStart earned break now? [Y/n/c/q]: ").strip().lower()
+            break_choice = prompt_break_choice()
         except (KeyboardInterrupt, EOFError):
             print("\nSession ended. Great work today!")
             break
 
-        if choice == 'q':
+        if break_choice == 'q':
             print("Session ended. Great work today!")
             break
-        elif choice not in ['n', 'c']:
+        elif break_choice == 'y':
             run_break_session(earned_break)
 
         try:
-            next_session = input(f"\nStart another focus session on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
+            next_choice = prompt_next_session_choice(task)
         except (KeyboardInterrupt, EOFError):
             print("\nSession ended. Great work today!")
             break
 
-        if next_session in ['n', 'q']:
+        if next_choice in ('n', 'q'):
             print("Session ended. Great work today!")
             break
+
 
 
 if __name__ == "__main__":
