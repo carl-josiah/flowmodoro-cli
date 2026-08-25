@@ -57,7 +57,7 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro --sound-stop <F>    Set custom audio for break completion alarm
   flowmodoro --repeat-focus <M>  Toggle repeating loop for Focus Start (on / off)
   flowmodoro --repeat-start <M>  Toggle repeating loop for Break Start (on / off)
-  flowmodoro --repeat-stop <M>   Toggle repeating loop for Break End Alarm (on / off)
+  flowmodoro --repeat-stop <M>  Toggle repeating loop for Break End Alarm (on / off)
   flowmodoro --sound-default     Reset all sound cues back to OS system defaults
 
 \033[1;33mSESSION PRUNING & HISTORY:\033[0m
@@ -110,6 +110,52 @@ class FormattedParser(argparse.ArgumentParser):
                     self.error(f"unrecognized option '{a}'.")
 
         return super().parse_args(args=args, namespace=namespace)
+
+
+def prompt_break_choice():
+    """Prompt for earned break action, rejecting any input other than Y, N, C, Q."""
+    while True:
+        try:
+            val = input("\nStart earned break now? [Y/n/c/q]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            elif val in ('c', 'cancel'):
+                return 'c'
+            elif val in ('q', 'quit', 'exit'):
+                return 'q'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), 'c' (cancel), or 'q' (quit).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def prompt_next_session_choice(task):
+    """Prompt before starting a new focus session, rejecting invalid inputs."""
+    while True:
+        try:
+            val = input(f"\nStart another focus session on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            elif val in ('q', 'quit', 'exit'):
+                return 'q'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), or 'q' (quit).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def prompt_short_session_retry():
+    """Prompt when focus duration is < 1s, rejecting invalid inputs."""
+    while True:
+        try:
+            val = input("Start another session? [Y/n]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes) or 'n' (no).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
 
 
 def main():
@@ -228,51 +274,6 @@ def main():
             print("\nSession canceled.")
             return
 
-def prompt_break_choice():
-    """Prompt for earned break action, rejecting any input other than Y, N, C, Q."""
-    while True:
-        try:
-            val = input("\nStart earned break now? [Y/n/c/q]: ").strip().lower()
-            if not val or val in ('y', 'yes'):
-                return 'y'
-            elif val in ('n', 'no'):
-                return 'n'
-            elif val in ('c', 'cancel'):
-                return 'c'
-            elif val in ('q', 'quit', 'exit'):
-                return 'q'
-            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), 'c' (cancel), or 'q' (quit).\033[0m")
-        except (KeyboardInterrupt, EOFError):
-            raise
-
-def prompt_next_session_choice(task):
-    """Prompt before starting a new focus session, rejecting invalid inputs."""
-    while True:
-        try:
-            val = input(f"\nStart another focus session on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
-            if not val or val in ('y', 'yes'):
-                return 'y'
-            elif val in ('n', 'no'):
-                return 'n'
-            elif val in ('q', 'quit', 'exit'):
-                return 'q'
-            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), or 'q' (quit).\033[0m")
-        except (KeyboardInterrupt, EOFError):
-            raise
-
-def prompt_short_session_retry():
-    """Prompt when focus duration is < 1s, rejecting invalid inputs."""
-    while True:
-        try:
-            val = input("Start another session? [Y/n]: ").strip().lower()
-            if not val or val in ('y', 'yes'):
-                return 'y'
-            elif val in ('n', 'no'):
-                return 'n'
-            print("\033[1;31mInvalid option. Please enter 'y' (yes) or 'n' (no).\033[0m")
-        except (KeyboardInterrupt, EOFError):
-            raise
-
     total_day_focus = 0
     _, _, md_file = get_active_paths()
     while True:
@@ -326,11 +327,9 @@ def prompt_short_session_retry():
             break
 
 
-
 if __name__ == "__main__":
     try:
         main()
     except (KeyboardInterrupt, EOFError):
         print("\nGoodbye!")
         sys.exit(0)
-
