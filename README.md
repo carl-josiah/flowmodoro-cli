@@ -12,7 +12,7 @@
 **A minimalist, terminal-native focus tracker built for uninterrupted cognitive flow.**  
 *Earned recovery based on actual deep work duration, with night owl day cutoffs, vault auto-sync, and zero-overlap audio controls.*
 
-[Quick Start](#-quick-start-minimalist-core) • [Features](#-key-features) • [Commands](#-command-reference) • [Analytics](#-analytics--dashboard) • [Night Owl Mode](#-night-owl-day-cutoff-hour)
+[Quick Start](#-quick-start-minimalist-core) • [Features](#-key-features) • [Commands](#-command-reference-table) • [Analytics](#-analytics--dashboard) • [Night Owl Mode](#-night-owl-day-cutoff-hour)
 
 ---
 
