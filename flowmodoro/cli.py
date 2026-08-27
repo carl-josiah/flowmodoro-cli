@@ -6,12 +6,15 @@ from .config import (
     set_daily_goal,
     set_max_break,
     set_day_cutoff,
+    set_theme,
     set_custom_sound,
     reset_sound_defaults,
     set_alarm_repeat,
     set_cue_repeat,
     get_active_paths,
-    get_config
+    get_config,
+    THEME_PALETTES,
+    DEFAULT_THEME
 )
 from .storage import (
     save_session,
@@ -44,8 +47,9 @@ class FormattedParser(argparse.ArgumentParser):
   flowmodoro -s, --stats         Display analytics dashboard & 28-day heatmap
   flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
 
-\033[1;33mGOALS, LIMITS & STORAGE:\033[0m
+\033[1;33mGOALS, THEMES & STORAGE:\033[0m
   flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 4h)
+  flowmodoro --theme <COLOR>     Set heatmap theme (green, red, blue, orange, purple)
   flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
   flowmodoro --cutoff <HOUR>     Set day cutoff hour for night owls (e.g. 3 for 3 AM)
   flowmodoro -p, --path <DIR>    Set persistent folder for Markdown & JSONL data
@@ -82,6 +86,8 @@ class FormattedParser(argparse.ArgumentParser):
             "clear-all": ("--clear-all", None),
             "stats": ("--stats", "-s"),
             "goal": ("--goal", "-g"),
+            "theme": ("--theme", None),
+            "color-scheme": ("--color-scheme", None),
             "cutoff": ("--cutoff", None),
             "day-cutoff": ("--day-cutoff", None),
             "path": ("--path", "-p"),
@@ -165,6 +171,7 @@ def prompt_short_session_retry():
 def main():
     parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker")
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
+    parser.add_argument("--theme", "--color-scheme", type=str, help="Set heatmap theme (green, red, blue, orange, purple)")
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
     parser.add_argument("--cutoff", "--day-cutoff", type=str, help="Set day cutoff hour for night owls (e.g. 3 for 3 AM)")
     parser.add_argument("--path", "-p", type=str, help="Set persistent storage folder")
@@ -191,6 +198,9 @@ def main():
 
     if args.goal:
         set_daily_goal(args.goal)
+        return
+    if args.theme:
+        set_theme(args.theme)
         return
     if args.max_break is not None:
         set_max_break(args.max_break)
@@ -243,13 +253,15 @@ def main():
         max_b = f"{cfg.get('max_break_minutes'):g} min" if cfg.get("max_break_minutes") else "Disabled (Uncapped)"
         cutoff_val = cfg.get("day_cutoff_hour", 0)
         cutoff_str = f"{cutoff_val}:00 AM (Night Owl Mode)" if cutoff_val > 0 else "00:00 Midnight (Default)"
+        t_name = cfg.get("theme", DEFAULT_THEME)
+        t_info = THEME_PALETTES.get(t_name, THEME_PALETTES[DEFAULT_THEME])
         f_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_focus_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         b_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_start_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         a_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_stop_sound", True) else " \033[0;33m[Single Chime]\033[0m"
 
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
         print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 4.0):g} hours/day\033[0m")
-
+        print(f"🎨 Heatmap Color Theme   : \033[1;35m{t_info['emoji']} {t_info['name']}\033[0m")
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
         print(f"🌙 Day Cutoff Hour        : \033[0;33m{cutoff_str}\033[0m")
         print(f"📄 Markdown Journal       : \033[0;32m{md_file}\033[0m")
@@ -258,6 +270,7 @@ def main():
         print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m{b_rep}")
         print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m{a_rep}\n")
         return
+
 
 
     if args.stats:

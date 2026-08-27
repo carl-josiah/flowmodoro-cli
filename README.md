@@ -119,7 +119,9 @@ pip install -e .
 | **Analytics Dashboard** | `-s, --stats` | View 28-day heatmap, task breakdown & streak summary | `flowmodoro --stats` |
 | **Filter Dashboard** | `-s -t <NAME>` | View dashboard filtered for a specific task | `flowmodoro --stats -t "Algorithms"` |
 | **Daily Goal** | `-g, --goal <HOURS>` | Set daily deep work target in hours (default: `4h`) | `flowmodoro --goal 5` |
+| **Heatmap Theme** | `--theme <COLOR>` | Set theme (`green`, `red`, `blue`, `orange`, `purple`) | `flowmodoro --theme purple` |
 | **Night Owl Cutoff** | `--cutoff <HOUR>` | Set day cutoff hour (e.g. `3` for 3:00 AM) | `flowmodoro --cutoff 3` |
+
 | **Max Break Cap** | `--max-break <MINS>`| Cap maximum break duration (0 to uncap) | `flowmodoro --max-break 20` |
 | **Storage Vault** | `-p, --path <DIR>` | Set persistent folder for Markdown & JSONL data | `flowmodoro -p ~/Vault/Flowmodoro` |
 | **Show Active Config** | `-w, --where` | Display active paths, goal, cutoff & audio settings | `flowmodoro --where` |
@@ -150,9 +152,10 @@ Run `flowmodoro --stats` to inspect your deep work performance, consistency heat
   • Focus Logged : 04h 15m 30s
   • Daily Goal   : [████████████████████] 106% (04:15:30 / 04:00:00)
 
-🗓️  28-Day Consistency Heatmap (Goal: 4h/day):
-  ░░▒▓  ▓██▒  █▓██  ████  (Today)
-  [· 0h  ░ <35%  ▒ <70%  ▓ <100%  █ Goal Met]
+🗓️  28-Day Activity Heatmap (🟣 Amethyst Violet | Goal: 4h/day):
+  ■ ■ ■ ■ ■ ■ ■   ■ ■ ■ ■ ■ ■ ■   ■ ■ ■ ■ ■ ■ ■   ■ ■ ■ ■ ■ ■ ■  (Today)
+  Legend: [ ■ 0h  ■ <35%  ■ <70%  ■ <100%  ■ Goal Met ]
+
 
 📈 Last 7 Days Activity:
   Date       | Focus Time  | Daily Target            | Goal Status

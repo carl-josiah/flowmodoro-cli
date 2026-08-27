@@ -1,7 +1,7 @@
 import os
 import math
 from datetime import date, timedelta, datetime
-from .config import get_active_paths, get_config, get_logical_date
+from .config import get_active_paths, get_config, get_logical_date, THEME_PALETTES, DEFAULT_THEME
 from .storage import load_all_sessions, format_time, format_short_time, normalize_task_name
 
 def render_ascii_bar(progress, width=20):
@@ -20,25 +20,40 @@ def render_ascii_bar(progress, width=20):
 def render_activity_heatmap(daily_totals, target_seconds):
     today = get_logical_date()
     output = []
-    t_sec = float(target_seconds) if (isinstance(target_seconds, (int, float)) and math.isfinite(target_seconds) and target_seconds > 0) else 21600.0
+    t_sec = float(target_seconds) if (isinstance(target_seconds, (int, float)) and math.isfinite(target_seconds) and target_seconds > 0) else 14400.0
+
+    config = get_config()
+    theme_name = config.get("theme", DEFAULT_THEME)
+    palette = THEME_PALETTES.get(theme_name, THEME_PALETTES.get(DEFAULT_THEME, {}))
+    levels = palette.get("levels", ["■", "■", "■", "■", "■"])
 
     for i in range(27, -1, -1):
         d_str = (today - timedelta(days=i)).strftime("%Y-%m-%d")
         sec = daily_totals.get(d_str, 0)
         ratio = sec / t_sec if t_sec > 0 else 0
         if ratio == 0:
-            output.append("·")
+            output.append(levels[0])
         elif ratio < 0.35:
-            output.append("\033[0;32m░\033[0m")
+            output.append(levels[1])
         elif ratio < 0.70:
-            output.append("\033[0;32m▒\033[0m")
+            output.append(levels[2])
         elif ratio < 1.0:
-            output.append("\033[1;32m▓\033[0m")
+            output.append(levels[3])
         else:
-            output.append("\033[1;33m█\033[0m")
-    
-    w1, w2, w3, w4 = "".join(output[:7]), "".join(output[7:14]), "".join(output[14:21]), "".join(output[21:])
-    return f"{w1}  {w2}  {w3}  {w4}  (Today)"
+            output.append(levels[4])
+
+    w1 = " ".join(output[:7])
+    w2 = " ".join(output[7:14])
+    w3 = " ".join(output[14:21])
+    w4 = " ".join(output[21:])
+    return f"{w1}   {w2}   {w3}   {w4}  \033[1;37m(Today)\033[0m"
+
+def render_heatmap_legend(theme_name=None):
+    if not theme_name or theme_name not in THEME_PALETTES:
+        theme_name = get_config().get("theme", DEFAULT_THEME)
+    palette = THEME_PALETTES.get(theme_name, THEME_PALETTES.get(DEFAULT_THEME, {}))
+    l = palette.get("levels", ["■", "■", "■", "■", "■"])
+    return f"  \033[2mLegend:\033[0m [ {l[0]} 0h  {l[1]} <35%  {l[2]} <70%  {l[3]} <100%  {l[4]} Goal Met ]"
 
 def display_dashboard(filter_task=None):
     target_dir, _, md_file = get_active_paths()
@@ -94,9 +109,11 @@ def display_dashboard(filter_task=None):
     print(f"  • Focus Logged : \033[1;32m{format_time(today_focus)}\033[0m")
     print(f"  • Daily Goal   : {render_ascii_bar(today_focus / DAILY_GOAL_SECONDS)} ({format_short_time(today_focus)} / {goal_str})")
 
-    print(f"\n🗓️  28-Day Consistency Heatmap (Goal: {goal_hours:g}h/day):")
+    theme_info = THEME_PALETTES.get(config.get("theme", DEFAULT_THEME), THEME_PALETTES[DEFAULT_THEME])
+    print(f"\n🗓️  28-Day Activity Heatmap ({theme_info['emoji']} {theme_info['name']} | Goal: {goal_hours:g}h/day):")
     print(f"  {render_activity_heatmap(daily_totals, DAILY_GOAL_SECONDS)}")
-    print("  \033[2m[· 0h  ░ <35%  ▒ <70%  ▓ <100%  █ Goal Met]\033[0m")
+    print(render_heatmap_legend(config.get("theme")))
+
 
     print(f"\n📈 Last 7 Days Activity:")
     print("  Date       | Focus Time  | Daily Target            | Goal Status")

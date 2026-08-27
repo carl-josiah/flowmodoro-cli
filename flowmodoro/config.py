@@ -12,6 +12,66 @@ USER_HOME = os.path.expanduser("~")
 CONFIG_FILE = os.path.join(USER_HOME, ".flowmodoro_config.json")
 DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Second Brain", "2 - Source Material", "Flowmodoro")
 
+DEFAULT_THEME = "green"
+
+THEME_PALETTES = {
+    "green": {
+        "name": "Emerald Green (GitHub Classic)",
+        "emoji": "🟢",
+        "levels": [
+            "\033[38;5;238m■\033[0m",  # L0: 0h (Dark Gray)
+            "\033[38;5;22m■\033[0m",   # L1: <35% (Dark Emerald)
+            "\033[38;5;35m■\033[0m",   # L2: <70% (Medium Green)
+            "\033[38;5;40m■\033[0m",   # L3: <100% (Vibrant Green)
+            "\033[1;38;5;46m■\033[0m"  # L4: Goal Met (Neon Emerald)
+        ]
+    },
+    "red": {
+        "name": "Crimson Ruby",
+        "emoji": "🔴",
+        "levels": [
+            "\033[38;5;238m■\033[0m",  # L0: 0h (Dark Gray)
+            "\033[38;5;52m■\033[0m",   # L1: <35% (Dark Maroon)
+            "\033[38;5;124m■\033[0m",  # L2: <70% (Ruby Red)
+            "\033[38;5;160m■\033[0m",  # L3: <100% (Bright Red)
+            "\033[1;38;5;196m■\033[0m" # L4: Goal Met (Neon Crimson)
+        ]
+    },
+    "blue": {
+        "name": "Sapphire Ocean",
+        "emoji": "🔵",
+        "levels": [
+            "\033[38;5;238m■\033[0m",  # L0: 0h (Dark Gray)
+            "\033[38;5;18m■\033[0m",   # L1: <35% (Dark Navy)
+            "\033[38;5;26m■\033[0m",   # L2: <70% (Ocean Blue)
+            "\033[38;5;33m■\033[0m",   # L3: <100% (Sky Blue)
+            "\033[1;38;5;45m■\033[0m"  # L4: Goal Met (Electric Blue)
+        ]
+    },
+    "orange": {
+        "name": "Amber Sunset",
+        "emoji": "🟠",
+        "levels": [
+            "\033[38;5;238m■\033[0m",  # L0: 0h (Dark Gray)
+            "\033[38;5;94m■\033[0m",   # L1: <35% (Dark Amber)
+            "\033[38;5;166m■\033[0m",  # L2: <70% (Warm Orange)
+            "\033[38;5;208m■\033[0m",  # L3: <100% (Bright Orange)
+            "\033[1;38;5;214m■\033[0m" # L4: Goal Met (Neon Sunset)
+        ]
+    },
+    "purple": {
+        "name": "Amethyst Violet",
+        "emoji": "🟣",
+        "levels": [
+            "\033[38;5;238m■\033[0m",  # L0: 0h (Dark Gray)
+            "\033[38;5;54m■\033[0m",   # L1: <35% (Dark Plum)
+            "\033[38;5;93m■\033[0m",   # L2: <70% (Medium Purple)
+            "\033[38;5;129m■\033[0m",  # L3: <100% (Bright Violet)
+            "\033[1;38;5;141m■\033[0m" # L4: Goal Met (Neon Purple)
+        ]
+    }
+}
+
 def sanitize_path(path_str):
     if not isinstance(path_str, str):
         return ""
@@ -71,7 +131,30 @@ def get_config():
     else:
         cfg["day_cutoff_hour"] = int(cutoff)
 
+    theme = cfg.get("theme")
+    if not isinstance(theme, str) or theme.strip().lower() not in THEME_PALETTES:
+        cfg["theme"] = DEFAULT_THEME
+    else:
+        cfg["theme"] = theme.strip().lower()
+
     return cfg
+
+def set_theme(theme_str):
+    if not theme_str or not isinstance(theme_str, str):
+        print("\033[1;31mError: Please specify a valid theme ('green', 'red', 'blue', 'orange', 'purple').\033[0m\n")
+        return
+    clean_theme = theme_str.strip().lower()
+    if clean_theme not in THEME_PALETTES:
+        valid_list = ", ".join(f"'{k}'" for k in THEME_PALETTES.keys())
+        print(f"\033[1;31mError: Invalid theme '{theme_str}'. Valid options are: {valid_list}.\033[0m\n")
+        return
+
+    config = get_config()
+    config["theme"] = clean_theme
+    save_config(config)
+    info = THEME_PALETTES[clean_theme]
+    print(f"\033[1;32m✓ Heatmap theme set to: {info['emoji']} {info['name']}\033[0m\n")
+
 
 def get_logical_date(dt=None):
     """Returns logical work date taking into account user's configured day_cutoff_hour."""
