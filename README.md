@@ -32,6 +32,7 @@ https://github.com/user-attachments/assets/0d80463e-3598-4d5c-b50a-a77a2cefddd0
 - [🚀 Quick Start (Minimalist Core)](#-quick-start-minimalist-core)
 - [💻 Command Reference Table](#-command-reference-table)
 - [📊 Analytics & Dashboard](#-analytics--dashboard)
+- [🎨 Heatmap Color Schemes](#-heatmap-color-schemes)
 - [🌙 Night Owl Day Cutoff Hour](#-night-owl-day-cutoff-hour)
 - [🔔 Audio & Per-Cue Controls](#-audio--per-cue-controls)
 - [📂 Vault Sync & Storage Management](#-vault-sync--storage-management)
@@ -61,11 +62,13 @@ Standard Pomodoro timers enforce artificial 25-minute cutoffs that forcefully br
 
 - ⚡ **Stopwatch Flow Loop:** Work uninterrupted until your flow breaks. Press `Ctrl + C` to save.
 - 🛑 **Strict Input Validation & Control:** Prompts strictly reject invalid entries and respond only to `[Y/n/c/q]` or `Ctrl + C`.
+- 🎨 **GitHub-Style Heatmap Themes (`--theme`):** Switch between 5 vibrant ANSI color palettes (`green`, `red`, `blue`, `orange`, `purple`).
 - 🌙 **Night Owl Day Cutoff (`--cutoff`):** Set a cutoff time (e.g., 3:00 AM) so late-night sessions automatically log under the previous day's goals and streaks.
 - 🏷️ **Task & Objective Breakdown:** Analytics dashboard displays session counts, focus hours, and percentage share across all objectives.
 - 🔇 **Audio Process Management:** Zero audio overlap; previous chimes or alarms are cleanly terminated before new sounds start.
 - 📊 **Native Excel Chart Export:** Generates pre-formatted `.xlsx` workbooks with donut charts, column charts, and pivot tables.
 - 📓 **Markdown Vault Sync:** Auto-syncs in real-time with Obsidian, Logseq, and Notion vaults (`flowmodoro_log.md`).
+
 
 ---
 
@@ -182,6 +185,32 @@ Run `flowmodoro --stats` to inspect your deep work performance, consistency heat
   • Active Vault    : /Users/YourName/Documents/ObsidianVault/flowmodoro_log.md
 ==============================================================
 ```
+
+---
+
+## 🎨 Heatmap Color Schemes
+
+Customize your terminal consistency heatmap with 5 ANSI 256-color palettes:
+
+```bash
+# GitHub Emerald Green (Default)
+flowmodoro --theme green
+
+# Amethyst Violet 🟣
+flowmodoro --theme purple
+
+# Sapphire Ocean 🔵
+flowmodoro --theme blue
+
+# Crimson Ruby 🔴
+flowmodoro --theme red
+
+# Amber Sunset 🟠
+flowmodoro --theme orange
+```
+
+> **Theme Persistence:** Your active theme selection is automatically saved in `~/.flowmodoro_config.json` and loaded across all future dashboard viewings.
+
 
 ---
 
