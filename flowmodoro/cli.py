@@ -32,6 +32,10 @@ from .timers import run_focus_session, run_break_session
 from .audio import interactive_system_sound_picker
 
 class FormattedParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        kwargs["allow_abbrev"] = False
+        super().__init__(*args, **kwargs)
+
     def format_help(self):
         return """\
 \033[1;36m======================================================================\033[0m
@@ -169,7 +173,8 @@ def prompt_short_session_retry():
 
 
 def main():
-    parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker")
+    parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker", allow_abbrev=False)
+
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
     parser.add_argument("--theme", "--color-scheme", type=str, help="Set heatmap theme (green, red, blue, orange, purple)")
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
