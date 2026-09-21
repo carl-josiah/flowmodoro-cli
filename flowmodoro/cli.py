@@ -1,7 +1,13 @@
 import argparse
 import sys
+import time
+import math
 from .config import (
     BREAK_RATIO,
+    DEFAULT_POMODORO_MINS,
+    POMODORO_CYCLE_COUNT,
+    calculate_pomodoro_break,
+    set_default_pomodoro,
     set_persistent_directory,
     set_daily_goal,
     set_max_break,
@@ -28,7 +34,7 @@ from .storage import (
     normalize_task_name
 )
 from .dashboard import display_dashboard
-from .timers import run_focus_session, run_break_session
+from .timers import run_focus_session, run_break_session, run_pomodoro_session
 from .audio import interactive_system_sound_picker
 
 class FormattedParser(argparse.ArgumentParser):
@@ -47,11 +53,13 @@ class FormattedParser(argparse.ArgumentParser):
 
 \033[1;33mCORE COMMANDS:\033[0m
   flowmodoro                     Start an interactive focus & flow session
+  flowmodoro -P, --pomodoro [M]  Start a Pomodoro countdown session (default: 25m)
   flowmodoro -t, --task <NAME>   Start session directly with designated task name
   flowmodoro -s, --stats         Display analytics dashboard & 28-day heatmap
   flowmodoro -s -t <TOPIC>       Display analytics filtered by a specific task/tag
 
 \033[1;33mGOALS, THEMES & STORAGE:\033[0m
+  flowmodoro --set-pomodoro <M>  Set default Pomodoro focus duration in minutes
   flowmodoro -g, --goal <HOURS>  Set daily focus goal in hours (default: 4h)
   flowmodoro --theme <COLOR>     Set heatmap theme (green, red, blue, orange, purple)
   flowmodoro --max-break <MINS>  Cap maximum break duration (e.g. 20; 0 to uncap)
@@ -84,6 +92,8 @@ class FormattedParser(argparse.ArgumentParser):
     def parse_args(self, args=None, namespace=None):
         raw_args = sys.argv[1:] if args is None else list(args)
         known_long_options = {
+            "pomodoro": ("--pomodoro", "-P"),
+            "set-pomodoro": ("--set-pomodoro", None),
             "delete": ("--delete", "-d"),
             "delete-task": ("--delete-task", None),
             "delete-all": ("--delete-all", None),
@@ -172,9 +182,148 @@ def prompt_short_session_retry():
             raise
 
 
+def prompt_mode_choice():
+    """Prompt to choose mode: [1] Flowmodoro (open stopwatch), [2] Pomodoro (countdown timer)."""
+    while True:
+        try:
+            val = input("\nSelect Focus Mode:\n  [1] ⚡ Flowmodoro (uninterrupted stopwatch flow)\n  [2] 🍅 Pomodoro   (custom countdown timer)\nChoose [1/2, default: 1]: ").strip().lower()
+            if not val or val in ('1', 'flow', 'flowmodoro', 'f'):
+                return 'flow'
+            elif val in ('2', 'pomo', 'pomodoro', 'p'):
+                return 'pomodoro'
+            print("\033[1;31mInvalid choice. Enter '1' for Flowmodoro or '2' for Pomodoro.\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def prompt_pomodoro_minutes(default_mins=25):
+    """Prompt user to choose how many minutes for the Pomodoro session."""
+    while True:
+        try:
+            val = input(f"Enter Pomodoro focus duration in minutes [default: {default_mins:g}]: ").strip()
+            if not val:
+                return float(default_mins)
+            mins = float(val)
+            if math.isfinite(mins) and mins > 0:
+                return mins
+            print("\033[1;31mPlease enter a valid positive number of minutes.\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+        except ValueError:
+            print("\033[1;31mInvalid number. Please enter a valid number of minutes.\033[0m")
+
+def parse_pomodoro_minutes_arg(val_str, default_mins=25):
+    """Validate minutes passed via CLI flag."""
+    if not val_str or val_str == "DEFAULT":
+        return float(default_mins)
+    try:
+        val = float(val_str)
+        if math.isfinite(val) and val > 0:
+            return val
+        print(f"\033[1;31mError: Pomodoro duration must be greater than 0. Received '{val_str}'.\033[0m\n")
+        sys.exit(1)
+    except ValueError:
+        print(f"\033[1;31mError: Invalid Pomodoro duration '{val_str}'. Please provide a valid number of minutes.\033[0m\n")
+        sys.exit(1)
+
+def prompt_next_pomodoro_choice(task, cycle, total_cycles):
+    while True:
+        try:
+            val = input(f"\nStart next Pomodoro [Cycle {cycle}/{total_cycles}] on '\033[1;36m{task}\033[0m'? [Y/n/q]: ").strip().lower()
+            if not val or val in ('y', 'yes'):
+                return 'y'
+            elif val in ('n', 'no'):
+                return 'n'
+            elif val in ('q', 'quit', 'exit'):
+                return 'q'
+            print("\033[1;31mInvalid option. Please enter 'y' (yes), 'n' (no), or 'q' (quit).\033[0m")
+        except (KeyboardInterrupt, EOFError):
+            raise
+
+def run_pomodoro_loop(task, focus_mins):
+    total_day_focus = 0
+    cycle = 1
+    _, _, md_file = get_active_paths()
+
+    short_break_sec, _ = calculate_pomodoro_break(focus_mins, cycle_index=1)
+    long_break_sec, _ = calculate_pomodoro_break(focus_mins, cycle_index=POMODORO_CYCLE_COUNT)
+
+    print(f"\n🍅 \033[1;32mPomodoro Configured:\033[0m {focus_mins:g}m Focus ➔ {format_short_time(short_break_sec)} Short Break ({format_short_time(long_break_sec)} Long Break every {POMODORO_CYCLE_COUNT} pomodoros)")
+    time.sleep(1)
+
+    while True:
+        try:
+            elapsed_sec, start_dt, end_dt, completed_full = run_pomodoro_session(
+                target_minutes=focus_mins,
+                task_name=task,
+                cycle=cycle,
+                total_cycles=POMODORO_CYCLE_COUNT
+            )
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
+        if elapsed_sec < 1.0:
+            print("\nFocus session too short (< 1s), session not logged.")
+            try:
+                retry = prompt_short_session_retry()
+                if retry == 'n':
+                    print("Session ended. Great work today!")
+                    break
+                continue
+            except (KeyboardInterrupt, EOFError):
+                print("\nSession ended. Great work today!")
+                break
+
+        total_day_focus += elapsed_sec
+
+        if completed_full:
+            earned_break, is_long_break = calculate_pomodoro_break(focus_mins, cycle_index=cycle)
+            break_label = f"Long Break (Cycle {cycle}/{POMODORO_CYCLE_COUNT})" if is_long_break else f"Short Break (Cycle {cycle}/{POMODORO_CYCLE_COUNT})"
+        else:
+            earned_break = elapsed_sec * BREAK_RATIO
+            is_long_break = False
+            break_label = "Partial Rest (Paused Early)"
+
+        save_session(start_dt, end_dt, elapsed_sec, earned_break, task_name=task)
+        print(f"\nCompleted Focus:   {format_short_time(elapsed_sec)}")
+        print(f"Earned Recovery:   {format_short_time(earned_break)} [{break_label}]")
+        print(f"Total Today:       {format_time(total_day_focus)}")
+        print(f"\033[0;32m✓ Saved to {md_file}\033[0m")
+
+        if completed_full and is_long_break:
+            print("\n\033[1;35m🎉 4-Pomodoro Set Complete! You earned a well-deserved long break.\033[0m")
+
+        try:
+            break_choice = prompt_break_choice()
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
+        if break_choice == 'q':
+            print("Session ended. Great work today!")
+            break
+        elif break_choice == 'y':
+            title = f"🍅 POMODORO: {break_label.upper()}"
+            run_break_session(earned_break, title=title)
+
+        if completed_full:
+            cycle = 1 if is_long_break else cycle + 1
+
+        try:
+            next_choice = prompt_next_pomodoro_choice(task, cycle, POMODORO_CYCLE_COUNT)
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession ended. Great work today!")
+            break
+
+        if next_choice in ('n', 'q'):
+            print("Session ended. Great work today!")
+            break
+
 def main():
     parser = FormattedParser(description="Flowmodoro CLI & Deep Work Tracker", allow_abbrev=False)
 
+    parser.add_argument("--pomodoro", "-P", nargs="?", const="DEFAULT", type=str, help="Start a Pomodoro countdown session (e.g. -P 25)")
+    parser.add_argument("--set-pomodoro", type=str, help="Set default Pomodoro focus duration in minutes")
     parser.add_argument("--goal", "-g", type=str, help="Set daily focus goal in hours")
     parser.add_argument("--theme", "--color-scheme", type=str, help="Set heatmap theme (green, red, blue, orange, purple)")
     parser.add_argument("--max-break", type=str, help="Cap maximum break duration in minutes")
@@ -201,6 +350,9 @@ def main():
     parser.add_argument("--clear-all", "--delete-all", action="store_true", help="Clear all session history")
     args = parser.parse_args()
 
+    if args.set_pomodoro:
+        set_default_pomodoro(args.set_pomodoro)
+        return
     if args.goal:
         set_daily_goal(args.goal)
         return
@@ -263,9 +415,13 @@ def main():
         f_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_focus_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         b_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_start_sound", False) else " \033[0;33m[Single Chime]\033[0m"
         a_rep = " \033[0;32m[Loop]\033[0m" if cfg.get("repeat_stop_sound", True) else " \033[0;33m[Single Chime]\033[0m"
+        p_mins = cfg.get("default_pomodoro_minutes", DEFAULT_POMODORO_MINS)
+        p_short, _ = calculate_pomodoro_break(p_mins, 1)
+        p_long, _ = calculate_pomodoro_break(p_mins, POMODORO_CYCLE_COUNT)
 
         print(f"\n📂 Active Storage Directory: \033[1;36m{target_dir}\033[0m")
         print(f"🎯 Daily Focus Goal       : \033[1;33m{cfg.get('daily_goal_hours', 4.0):g} hours/day\033[0m")
+        print(f"🍅 Default Pomodoro       : \033[1;32m{p_mins:g} mins\033[0m (Break: {p_short/60:g}m short / {p_long/60:g}m long)")
         print(f"🎨 Heatmap Color Theme   : \033[1;35m{t_info['emoji']} {t_info['name']}\033[0m")
         print(f"⏱️  Max Break Limit        : \033[0;33m{max_b}\033[0m")
         print(f"🌙 Day Cutoff Hour        : \033[0;33m{cutoff_str}\033[0m")
@@ -275,8 +431,6 @@ def main():
         print(f"🔔 Break Start Audio      : \033[0;33m{cfg.get('start_sound') or 'System Default'}\033[0m{b_rep}")
         print(f"⏰ Break End Alarm Audio  : \033[0;33m{cfg.get('stop_sound') or 'System Default'}\033[0m{a_rep}\n")
         return
-
-
 
     if args.stats:
         display_dashboard(filter_task=args.task)
@@ -294,6 +448,8 @@ def main():
         interactive_delete_session()
         return
 
+    cfg = get_config()
+    default_pomo_mins = cfg.get("default_pomodoro_minutes", DEFAULT_POMODORO_MINS)
 
     if args.task:
         task = normalize_task_name(args.task)
@@ -304,6 +460,30 @@ def main():
         except (KeyboardInterrupt, EOFError):
             print("\nSession canceled.")
             return
+
+    # Determine mode: Flowmodoro or Pomodoro
+    if args.pomodoro is not None:
+        mode = 'pomodoro'
+        if args.pomodoro == "DEFAULT":
+            try:
+                pomo_mins = prompt_pomodoro_minutes(default_pomo_mins)
+            except (KeyboardInterrupt, EOFError):
+                print("\nSession canceled.")
+                return
+        else:
+            pomo_mins = parse_pomodoro_minutes_arg(args.pomodoro, default_pomo_mins)
+    else:
+        try:
+            mode = prompt_mode_choice()
+            if mode == 'pomodoro':
+                pomo_mins = prompt_pomodoro_minutes(default_pomo_mins)
+        except (KeyboardInterrupt, EOFError):
+            print("\nSession canceled.")
+            return
+
+    if mode == 'pomodoro':
+        run_pomodoro_loop(task, pomo_mins)
+        return
 
     total_day_focus = 0
     _, _, md_file = get_active_paths()

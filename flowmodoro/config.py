@@ -8,6 +8,10 @@ BREAK_RATIO = 0.2
 DEFAULT_GOAL_HOURS = 4.0
 DEFAULT_MAX_BREAK_MINS = None
 DEFAULT_DAY_CUTOFF_HOUR = 0
+DEFAULT_POMODORO_MINS = 25
+POMODORO_BREAK_RATIO = 0.2
+POMODORO_LONG_BREAK_MULTIPLIER = 3
+POMODORO_CYCLE_COUNT = 4
 USER_HOME = os.path.expanduser("~")
 CONFIG_FILE = os.path.join(USER_HOME, ".flowmodoro_config.json")
 DEFAULT_TARGET_DIR = os.path.join(USER_HOME, "Documents", "Second Brain", "2 - Source Material", "Flowmodoro")
@@ -335,6 +339,58 @@ def set_cue_repeat(cue_key, val_str):
 
 def set_alarm_repeat(val_str):
     set_cue_repeat("stop_sound", val_str)
+
+
+def calculate_pomodoro_break(focus_minutes, cycle_index=1):
+    """Calculate the break duration for the usual Pomodoro.
+    - Short break: 1:5 ratio (focus_minutes * 0.20), minimum 1 minute (or 60s for >=1m).
+      e.g. 25m focus -> 5m break (300s), 50m focus -> 10m break (600s).
+    - Long break (every 4th cycle): 3x short break duration (e.g. 15m for 25m focus).
+    Returns (break_seconds, is_long_break).
+    """
+    try:
+        f_min = float(focus_minutes)
+        if not math.isfinite(f_min) or f_min <= 0:
+            f_min = float(DEFAULT_POMODORO_MINS)
+    except (ValueError, TypeError):
+        f_min = float(DEFAULT_POMODORO_MINS)
+
+    is_long = (cycle_index > 0 and cycle_index % POMODORO_CYCLE_COUNT == 0)
+
+    raw_break_sec = f_min * 60.0 * POMODORO_BREAK_RATIO
+    if f_min < 1.0:
+        short_break_seconds = max(1.0, round(raw_break_sec))
+    else:
+        short_break_seconds = max(60.0, round(raw_break_sec))
+
+    if is_long:
+        break_seconds = short_break_seconds * POMODORO_LONG_BREAK_MULTIPLIER
+    else:
+        break_seconds = short_break_seconds
+
+    return float(break_seconds), is_long
+
+
+def set_default_pomodoro(mins_str):
+    if not mins_str or not isinstance(mins_str, str):
+        print("\033[1;31mError: Please specify pomodoro duration in minutes (e.g. flowmodoro --set-pomodoro 25).\033[0m\n")
+        return
+    try:
+        val = float(mins_str)
+        if not math.isfinite(val) or val <= 0:
+            print("\033[1;31mError: Pomodoro duration must be a positive number.\033[0m\n")
+            return
+    except ValueError:
+        print(f"\033[1;31mError: Invalid number '{mins_str}'. Please provide a valid duration in minutes.\033[0m\n")
+        return
+
+    config = get_config()
+    config["default_pomodoro_minutes"] = val
+    save_config(config)
+    break_sec, _ = calculate_pomodoro_break(val, cycle_index=1)
+    long_sec, _ = calculate_pomodoro_break(val, cycle_index=4)
+    print(f"\033[1;32m✓ Default Pomodoro duration set to {val:g} minutes.\033[0m")
+    print(f"  Short break: {break_sec / 60:g} min | Long break (every 4th cycle): {long_sec / 60:g} min\n")
 
 
 

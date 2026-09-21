@@ -61,6 +61,7 @@ Standard Pomodoro timers enforce artificial 25-minute cutoffs that forcefully br
 ## ✨ Key Features
 
 - ⚡ **Stopwatch Flow Loop:** Work uninterrupted until your flow breaks. Press `Ctrl + C` to save.
+- 🍅 **Pomodoro Countdown Mode (`-P`, `--pomodoro`):** Run structured Pomodoro sessions with custom minutes and automated break calculations (5m break for 25m work, plus 15m long break on cycle 4).
 - 🛑 **Strict Input Validation & Control:** Prompts strictly reject invalid entries and respond only to `[Y/n/c/q]` or `Ctrl + C`.
 - 🎨 **GitHub-Style Heatmap Themes (`--theme`):** Switch between 5 vibrant ANSI color palettes (`green`, `red`, `blue`, `orange`, `purple`).
 - 🌙 **Night Owl Day Cutoff (`--cutoff`):** Set a cutoff time (e.g., 3:00 AM) so late-night sessions automatically log under the previous day's goals and streaks.
@@ -117,14 +118,15 @@ pip install -e .
 
 | Command | Option / Flag | Description | Example |
 | :--- | :--- | :--- | :--- |
-| **Interactive Mode** | *(none)* | Start interactive focus session loop | `flowmodoro` |
+| **Interactive Mode** | *(none)* | Start interactive focus session loop (choose Flow or Pomodoro) | `flowmodoro` |
+| **Pomodoro Mode** | `-P, --pomodoro [MINS]` | Start Pomodoro countdown (default: 25m or custom mins) | `flowmodoro -P 25` |
+| **Default Pomodoro** | `--set-pomodoro <MINS>` | Set default Pomodoro focus duration in minutes | `flowmodoro --set-pomodoro 30` |
 | **Direct Task** | `-t, --task <NAME>` | Start focus session immediately with task name | `flowmodoro -t "Distributed Systems"` |
 | **Analytics Dashboard** | `-s, --stats` | View 28-day heatmap, task breakdown & streak summary | `flowmodoro --stats` |
 | **Filter Dashboard** | `-s -t <NAME>` | View dashboard filtered for a specific task | `flowmodoro --stats -t "Algorithms"` |
 | **Daily Goal** | `-g, --goal <HOURS>` | Set daily deep work target in hours (default: `4h`) | `flowmodoro --goal 5` |
 | **Heatmap Theme** | `--theme <COLOR>` | Set theme (`green`, `red`, `blue`, `orange`, `purple`) | `flowmodoro --theme purple` |
 | **Night Owl Cutoff** | `--cutoff <HOUR>` | Set day cutoff hour (e.g. `3` for 3:00 AM) | `flowmodoro --cutoff 3` |
-
 | **Max Break Cap** | `--max-break <MINS>`| Cap maximum break duration (0 to uncap) | `flowmodoro --max-break 20` |
 | **Storage Vault** | `-p, --path <DIR>` | Set persistent folder for Markdown & JSONL data | `flowmodoro -p ~/Vault/Flowmodoro` |
 | **Show Active Config** | `-w, --where` | Display active paths, goal, cutoff & audio settings | `flowmodoro --where` |
@@ -139,6 +141,27 @@ pip install -e .
 | **Interactive Delete** | `-d, --delete` | Mass delete sessions by range, list, or task | `flowmodoro --delete` |
 | **Delete by Task** | `--delete-task <T>` | Purge all sessions matching a task name | `flowmodoro --delete-task test` |
 | **Clear History** | `--clear-all` | Purge all recorded session logs | `flowmodoro --clear-all` |
+
+---
+
+## 🍅 Pomodoro Mode & Break Calculation
+
+Prefer classic countdown intervals over open-ended stopwatches? Flowmodoro includes a full **Pomodoro Mode**:
+
+- **Custom Focus Duration:** Specify any duration in minutes with `-P <MINS>` or choose interactively at startup.
+- **Automated Break Calculation:**
+  $$\text{Short Break} = \text{round}\left(\text{Focus Minutes} \times 0.20\right)$$
+  - **25 min Focus** $\rightarrow$ **5 min Short Break**
+  - **30 min Focus** $\rightarrow$ **6 min Short Break**
+  - **50 min Focus** $\rightarrow$ **10 min Short Break**
+- **4-Cycle Long Break:** Every 4th completed Pomodoro earns a celebratory **Long Break** ($3\times$ short break, e.g., 15 minutes for 25m work).
+- **Quick Commands:**
+  ```bash
+  flowmodoro -P          # Classic 25m Pomodoro (or prompt)
+  flowmodoro -P 30       # 30m Pomodoro (6m break)
+  flowmodoro -P 50 -t DB # 50m Pomodoro on DB task (10m break)
+  flowmodoro --set-pomodoro 25  # Configure default duration
+  ```
 
 ---
 
